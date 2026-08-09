@@ -1,0 +1,41 @@
+# ─── engagement data — NEVER publish ────────────────────────────────────────
+# targets/ holds live scope, VPS IPs, researcher handles, and TEST CREDENTIALS
+# (accounts.md). Only the empty skeleton and the registry pointer are shareable.
+targets/*
+!targets/_template/
+!targets/TARGETS.example.md
+# generated view of a brain — regenerate it, never track it
+targets/_template/dashboard.html
+
+# ─── knowledge/ — LOCAL BUILD-TIME INPUT ───────────────────────────────────
+# Users put reports, research, notes and experiments here to re-evaluate a named skill/playbook.
+# Source material and its evaluation manifest stay local; only guides and optional helpers ship.
+knowledge/*
+!knowledge/README.md
+!knowledge/reports/
+knowledge/reports/*
+!knowledge/reports/README.md
+# Optional knowledge helpers ship. Source-specific credentials come through config.py or env.
+!knowledge/tools/
+!knowledge/tools/*
+# MINED.tsv describes YOUR knowledge and evaluation decisions.
+knowledge/MINED.tsv
+
+# ─── secrets & machine config ──────────────────────────────────────────────
+# config.json holds API keys, the VPS address and your researcher handle.
+# config.example.json is the committed template — keep them in sync when adding a field.
+config.json
+
+# ─── local machine / tool scratch ──────────────────────────────────────────
+.claude/settings.local.json
+.playwright-mcp/
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+*.tmp
+
+# local maintainer pre-push audit wrapper; public CI runs its checks directly
+tools/doctor.py

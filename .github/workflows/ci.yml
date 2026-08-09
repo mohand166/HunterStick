@@ -1,0 +1,30 @@
+name: workspace-integrity
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check public workspace
+        run: python tools/self-check.py
+      - name: Run regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Compile Python tools
+        run: python -m compileall -q tools tests knowledge/tools
+      - name: Parse shell tools
+        run: |
+          # bash, not sh: these carry a bash shebang and use bash features (arrays in vps.sh);
+          # dash — Ubuntu's /bin/sh — cannot parse them, which is not a bug in the scripts.
+          for f in tools/*.sh knowledge/tools/*.sh; do bash -n "$f"; done
+      - name: Check the skill dependency graph
+        run: python tools/graph.py --check

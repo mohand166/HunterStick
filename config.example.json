@@ -1,0 +1,78 @@
+{
+  "_README": [
+    "Copy this file to config.json and fill it in. config.json is gitignored \u2014 never commit it.",
+    "Every value can be overridden by an environment variable: BBW_<UPPER_DOT_PATH>.",
+    "  e.g. BBW_VPS_HOST=1.2.3.4   BBW_API_KEYS_SHODAN=xxxx   BBW_DEFAULTS_RATE_LIMIT_RPS=3",
+    "Precedence: environment variable > config.json > this file's defaults.",
+    "Check what is set without printing any secret:  tools/config.py check",
+    "Read one value:                                  tools/config.py get vps.host",
+    "Export for shell scripts:                        eval \"$(tools/config.py env)\""
+  ],
+  "researcher": {
+    "_note": "Identifies you to the programs you test. handle + header_value are your attribution identity, permitted in ONE place only: the configured attribution header (header_name), injected by vps-run.py — never a URL, body, cookie or other header. config.py hides handle/header_value/contact_email/protected_aliases from check/get/env and nothing writes them to a target brain. RECOMMENDED: put your real name and any nicknames in protected_aliases — that is the ONLY way the mechanical guard can catch a name a model picked up from chat and tried to send; without it, the always-loaded rule is the only control.",
+    "handle": "",
+    "header_name": "X-Bug-Bounty",
+    "header_value": "",
+    "contact_email": "",
+    "protected_aliases": []
+  },
+  "vps": {
+    "_note": "Where heavy tooling runs. enabled=false leaves passive OSINT, reasoning, request analysis, and manual browser work available; active tool-driven recon phases stop until a VPS exists.",
+    "enabled": false,
+    "user": "",
+    "host": "",
+    "port": 22,
+    "ssh_key": "~/.ssh/id_ed25519",
+    "workdir": "~/targets",
+    "codedir": "~/hunterstick"
+  },
+  "api_keys": {
+    "_note": [
+      "All optional. Missing keys degrade coverage; they never cause a silent empty result \u2014",
+      "a phase that needs a key it does not have must say so, not report zero findings.",
+      "github accepts a list so subfinder/github-subdomains can rotate on rate limit.",
+      "pdcp = ProjectDiscovery Cloud. zoomeye = subfinder's 'zoomeyeapi'. intelx here is the API key, not the INTELX_URL endpoint."
+    ],
+    "hackerone": {
+      "username": "",
+      "token": ""
+    },
+    "securitytrails": "",
+    "shodan": "",
+    "censys": {
+      "api_id": "",
+      "secret": ""
+    },
+    "github": [],
+    "chaos": "",
+    "virustotal": "",
+    "binaryedge": "",
+    "fofa": {
+      "email": "",
+      "key": ""
+    },
+    "urlscan": "",
+    "intelx": "",
+    "netlas": "",
+    "fullhunt": "",
+    "bevigil": "",
+    "zoomeye": "",
+    "pdcp": ""
+  },
+  "defaults": {
+    "_note": [
+      "Workspace-wide floors. A program's own limit ALWAYS wins when it is stricter \u2014",
+      "targets/<t>/scope.md is the authority, this is only the fallback."
+    ],
+    "rate_limit_rps": 5,
+    "http_timeout_s": 10,
+    "concurrency": 25,
+    "user_agent": ""
+  },
+  "tooling": {
+    "_note": "Local endpoints the workflows may use. Burp proxy is optional.",
+    "burp_proxy": "http://127.0.0.1:8080",
+    "interactsh_server": "",
+    "resolvers_url": "https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt"
+  }
+}
