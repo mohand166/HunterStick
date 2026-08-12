@@ -213,30 +213,6 @@ drift. Deriving a possible chain sends no traffic and does not turn a hypothesis
 
 #### Example: open redirect on one host, OAuth on another
 
-```mermaid
-flowchart LR
-    A[Host X<br/>Confirmed open redirect]
-    B[observations.tsv<br/>Observed references or<br/>authenticates-via edge]
-    C[Host Y<br/>OAuth callback flow]
-    D[target-graph.py --chains]
-    E{Chain state}
-    F[PARTIAL<br/>Name the missing primitive<br/>as a next hunting option]
-    G[READY hypothesis<br/>OAuth response may traverse<br/>the redirect to an attacker]
-    H[Hunter chooses whether<br/>to validate the chain]
-    I[Minimum safe test<br/>with a controlled account]
-    J[Stored chain evidence<br/>and impact argument]
-
-    A --> D
-    B --> D
-    C --> D
-    D --> E
-    E -->|One primitive or edge missing| F
-    E -->|Both primitives and edge present| G
-    F --> H
-    G --> H
-    H --> I --> J
-```
-
 Suppose `app.acme.com` has an open redirect and `auth.acme.com` runs an OAuth flow that accepts or
 references a callback on `app.acme.com`. Individually, the redirect may be low severity. Together,
 they suggest that an authorization response might reach the redirect and leak a code or token,
