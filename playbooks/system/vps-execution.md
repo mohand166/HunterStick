@@ -73,8 +73,10 @@ artifacts/reports.
   loot/               anything sensitive found (kept on VPS, never synced casually)
 ```
 
-Naming: prefix outputs with an ISO date so the monitoring/diff skill can compare
-snapshots, e.g. `raw/subdomains/$DATE-subfinder.txt`.
+Naming: prefix scanner-controlled outputs with the ISO date and run id so two attempts on the same
+day cannot overwrite each other: `<YYYY-MM-DD>-<run-id>-<tool>-<purpose>.<ext>`, for example
+`raw/subdomains/$DATE-$RUN_ID-subfinder.txt`. The fixed-point JS reducer, monitor, sweep, and
+`run.py` use their own stable filenames documented in `SKILL-OUTPUTS.md`.
 
 ---
 
@@ -258,7 +260,7 @@ The relevant flags are: `--skill` (required), `--run-id`, `--timeout` (default 1
 `--max-rps`, `--calibration`, `--strict` or `--local-egress`; those belonged to a ~310-line policy
 engine that was deleted, because it encoded judgements that are the hunter's (which packets, from
 where, at what rate). Command choice remains the model's; mechanically assertable invocation and
-output contracts belong to the runner (`skills/_recon-method.md`).
+output contracts belong to the runner (`skills/shared/_recon-method.md`).
 
 **It does not build the command — you do, from what you observed.** `-fs 2048` comes from your
 calibration, the rate from the program, the wordlist from this target's own vocabulary. Correctness

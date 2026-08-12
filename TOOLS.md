@@ -100,7 +100,7 @@ through a hand-rolled script, so none of the checking applied. And the checks en
 belong to the hunter — which packets to send, from where, at what rate.
 
 So the split moved to where it belongs: **the model owns command choice**
-(`skills/_recon-method.md` — read the help, pilot, verify the shape, adapt), and `run.py` owns the
+(`skills/shared/_recon-method.md` — read the help, pilot, verify the shape, adapt), and `run.py` owns the
 mechanically assertable interface and evidence. It rejects known semantic traps before execution,
 infers stable contracts for the structured scanners this project relies on, and lets the caller add
 `--expect-format` / `--expect-fields` for the exact downstream consumer.

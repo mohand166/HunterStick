@@ -32,7 +32,7 @@ REQUIRED_PATHS = (
     "targets/_template/scope-evidence.md",
     "targets/_template/accounts.md",
     "playbooks/system/phase-routing.md",
-    "skills/init-target.md",
+    "skills/setup/init-target.md",
 )
 FORBIDDEN_TEXT = (
     "00-" + "scope-review",
@@ -205,11 +205,11 @@ def check_class_names():
 # it would have re-imposed both.
 #
 # 1. The ARCHITECTURE changed. A skill deliberately no longer carries the invocation — no flag
-#    lists, no pasted pipelines (`skills/_recon-method.md`, `recon-toolkit.md`). There is no
+#    lists, no pasted pipelines (`skills/shared/_recon-method.md`, `recon-toolkit.md`). There is no
 #    command chain left in the prose for this to inspect, so it was asserting the shape of
 #    something the workspace stopped writing on purpose.
 # 2. The POLICY changed. Scope does not gate execution here: "Required inputs present -> run it.
-#    Nothing else stops you. Not scope, not accounts" (`skills/_recon-method.md`). A check that
+#    Nothing else stops you. Not scope, not accounts" (`skills/shared/_recon-method.md`). A check that
 #    fails the build when a skill does not scope-filter is a scope gate wearing a test's clothes.
 #
 # It also never bit in practice: scope-filter passed 35,426 of 35,426 names and 27,220 of 27,220
@@ -314,41 +314,47 @@ def check_no_dangling_file_references():
 def check_skill_pointers():
     """One body, thin per-runtime pointers — and they must agree.
 
-    The portable layer deliberately has no build step: `skills/<name>.md` is the single body,
+    The portable layer deliberately has no build step: the nested `skills/<category>/<name>.md`
+    file is the single body,
     and `.claude/skills/<name>/SKILL.md` carries only the frontmatter a runtime matches on.
     Nothing regenerates one from the other, so this is what stops them drifting — and a
     pointer whose description has drifted is worse than none, because the runtime triggers on
     the stale text while the body says something else.
     """
     import re as _re
+    import skilllib
     sk, cs = ROOT / "skills", ROOT / ".claude" / "skills"
     if not sk.is_dir():
         return []
     failures = []
-    bodies = {}
-    for f in sorted(sk.glob("*.md")):
-        if f.name.startswith("_"):
-            continue
+    bodies, paths = {}, {}
+    for f in skilllib.iter_skill_files(sk):
         m = _re.match(r"---\nname: (.+?)\ndescription: (.+?)\n---\n",
                       f.read_text(encoding="utf-8"), _re.S)
         if not m:
-            failures.append(f"skills/{f.name}: no name/description frontmatter")
+            failures.append(f"{f.relative_to(ROOT)}: no name/description frontmatter")
             continue
-        if m.group(1).strip() != f.stem:
-            failures.append(f"skills/{f.name}: frontmatter name is '{m.group(1).strip()}'")
-        bodies[f.stem] = m.group(2).strip()
+        slug = m.group(1).strip()
+        if slug != f.stem:
+            failures.append(f"{f.relative_to(ROOT)}: frontmatter name is '{slug}'")
+        if slug in bodies:
+            failures.append(f"duplicate skill slug '{slug}': {paths[slug]} and "
+                            f"{f.relative_to(ROOT)}")
+            continue
+        bodies[slug] = m.group(2).strip()
+        paths[slug] = f.relative_to(ROOT).as_posix()
 
     for slug, desc in bodies.items():
         p = cs / slug / "SKILL.md"
         if not p.exists():
-            failures.append(f"skills/{slug}.md has no runtime pointer at "
+            failures.append(f"{paths[slug]} has no runtime pointer at "
                             f".claude/skills/{slug}/SKILL.md")
             continue
         text = p.read_text(encoding="utf-8")
         m = _re.match(r"---\nname: (.+?)\ndescription: (.+?)\n---\n", text, _re.S)
         if not m or m.group(2).strip() != desc:
             failures.append(f".claude/skills/{slug}: description has drifted from the body")
-        if f"skills/{slug}.md" not in text:
+        if paths[slug] not in text:
             failures.append(f".claude/skills/{slug}: does not point at its body")
         after = text.split("---", 2)[-1] if text.count("---") >= 2 else text
         if len(after) > 500:
@@ -616,16 +622,16 @@ def _tool_reference_failures(docs, tools_dir):
 
 def _router_agreement_failures(agents_text, skills_dir, dispatch_dir):
     """The AGENTS.md router is the cross-model dispatch table; nothing mechanical kept it honest.
-    Two invariants: (1) every `skills/<name>.md` a router row NAMES must exist — a dangling router
+    Two invariants: (1) every `skills/<path>/<name>.md` a router row NAMES must exist — a dangling router
     entry sends the model to a file that is not there; (2) the skill count AGENTS.md ADVERTISES must
     equal the dispatchers the runtime actually exposes (`.claude/skills/*/SKILL.md`), or the model
     reads a headline number that is a lie. `<...>` template rows (e.g. `skills/<objective>.md`) are
     not real references and are skipped by the character class."""
     failures = []
-    for m in re.finditer(r"`skills/([a-z0-9_-]+)\.md`", agents_text):
-        name = m.group(1)
-        if not (skills_dir / f"{name}.md").exists():
-            failures.append(f"AGENTS.md router names skills/{name}.md, which does not exist")
+    for m in re.finditer(r"`skills/([a-z0-9_./-]+\.md)`", agents_text):
+        relative = m.group(1)
+        if not (skills_dir / relative).exists():
+            failures.append(f"AGENTS.md router names skills/{relative}, which does not exist")
     dispatchers = ([d.name for d in dispatch_dir.iterdir() if d.is_dir() and (d / "SKILL.md").exists()]
                    if dispatch_dir.exists() else [])
     m = re.search(r"exposes all \*\*(\d+)\*\* skills", agents_text)

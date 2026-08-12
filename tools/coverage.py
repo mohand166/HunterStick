@@ -251,7 +251,7 @@ def load_proposed(target, class_rules, known_properties):
     """Load proposed classes, observed properties, and required principals per entrypoint."""
     path = target / "attack-surface.md"
     if not path.exists():
-        print(f"FAIL — {path} missing. Run skills/attack-surface-prioritization.md "
+        print(f"FAIL — {path} missing. Run skills/context-and-prioritization/attack-surface-prioritization.md "
               f"before asking for coverage.", file=sys.stderr)
         return None
     tables = parse_tables(path)

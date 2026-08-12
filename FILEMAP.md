@@ -37,6 +37,7 @@ file. For an exactly named skill even that is skipped: you were told what to run
 | `assets/logo.png` | The standalone HunterStick logo for project and publication use. | **HUMAN** |
 | `assets/hunterstick-execution-context-flow.png` | The detailed human-directed execution and persistent-context diagram embedded in `README.md`. | **HUMAN** |
 | `TOOLS.md` | Tool behavior grouped by hunting intent, with the execution/side-effect model and pointers to each CLI's live `--help`. | **HUMAN** |
+| `SKILL-OUTPUTS.md` | Hunter-facing output map: what every recon skill, vulnerability class, flow and workflow writes to the local brain or VPS heavy store. | **HUMAN** |
 | `CUSTOMIZE.md` | Maintainer guide for adding classes, skills, flows, integrations and deterministic tools without bloating runtime context. | **HUMAN** |
 | `VALIDATION-ROUND-1.md` | Historical issue ledger from the first live harness validation. Explicitly not current operating instructions; retained because each regression has provenance. | **HUMAN** |
 | `LICENSE` | MIT. | **HUMAN** |
@@ -49,7 +50,9 @@ file. For an exactly named skill even that is skipped: you were told what to run
 
 ## `skills/` — the bodies · `.claude/skills/` — the pointers
 
-**Thirty-two skills, one body each.** A skill body lives once at `skills/<name>.md`. Each
+**Thirty-two skills, one body each.** A skill body lives once under
+`skills/<category>/<name>.md`. The category is human navigation; the stable invocation remains
+the slug (`subdomain-enumeration`, not `know-your-target/subdomain-enumeration`). Each
 `.claude/skills/<name>/SKILL.md` carries only the frontmatter a runtime matches on plus a
 one-line pointer, so Claude Code still auto-triggers on "http probe the estate" while every
 other runtime — OpenCode, Codex, whatever the user switched to this week — dispatches to the
@@ -60,17 +63,25 @@ There is no recon dispatcher. It used to be a 180-line wrapper routing 23 object
 objective is now its own focused skill, which is the whole point — a focused prompt is the
 mechanism, and a wrapper that routes 23 of them is a general prompt wearing a costume.
 
-| group | skills |
+| directory | skills |
 |---|---|
-| **shared method** | `_recon-method.md` — the loop every recon skill runs: find the installed tool, read its help, pilot, **verify the output shape**, adapt, scale. Skills carry objectives and traps; this carries the method. |
-| **asset discovery** | `organization-and-roots` · `subdomain-enumeration` · `dns-analysis` · `asn-and-ip-discovery` · `subdomain-takeover` |
-| **reachability** | `live-host-validation` · `port-and-service-discovery` · `http-probing` · `technology-fingerprinting` |
-| **surface** | `url-collection` · `content-discovery` · `javascript-analysis` · `api-discovery` · `parameter-discovery` |
-| **breadth** | `cloud-asset-discovery` · `repository-and-secret-recon` · `component-inventory` |
-| **application** | `authentication-surface-mapping` · `application-mapping` |
-| **the bridge** | **`derive-properties`** — turns entrypoints into propertied rows. Recon produces hosts; hunting consumes *entrypoints with properties*, because a property is what selects a class. Without it an estate of 46,358 hosts yields zero testable candidates, which is not hypothetical. |
-| **synthesis** | `host-correlation-and-clustering` · `cross-host-endpoint-reuse` · `attack-surface-prioritization` · `recon-summary-and-handoff` · `monitoring-and-diff` |
-| **testing & other** | `vuln-hunt` (dispatcher over the class library) · `analyse-request` · `run-flow` · `tech-analysis` · `ground-a-playbook` · `compose-task` |
+| `skills/README.md` | Human index explaining the categories and invocation rule. Navigation only; never an invocable skill. |
+| `shared/` | `_recon-method.md` — the loop every recon skill runs: find the installed tool, read its help, pilot, **verify the output shape**, adapt, scale. |
+| `setup/` | `init-target` |
+| `know-your-target/` | `organization-and-roots` · `subdomain-enumeration` · `dns-analysis` · `asn-and-ip-discovery` · `live-host-validation` · `port-and-service-discovery` · `http-probing` |
+| `surface-discovery/` | `technology-fingerprinting` · `component-inventory` · `url-collection` · `content-discovery` · `javascript-analysis` · `api-discovery` · `parameter-discovery` |
+| `application-understanding/` | `authentication-surface-mapping` · `application-mapping` |
+| `external-assets/` | `cloud-asset-discovery` · `repository-and-secret-recon` · `subdomain-takeover` |
+| `context-and-prioritization/` | `host-correlation-and-clustering` · `cross-host-endpoint-reuse` · **`derive-properties`** · `attack-surface-prioritization` · `recon-summary-and-handoff` |
+| `monitoring/` | `monitoring-and-diff` |
+| `analysis/` | `analyse-request` · `tech-analysis` |
+| `vulnerability-testing/` | `vuln-hunt` — dispatcher over the class library |
+| `orchestration/` | `run-flow` · `compose-task` |
+| `maintenance/` | `ground-a-playbook` |
+
+`tools/skilllib.py` is the canonical recursive resolver used by preflight, the computed graph,
+resume routing, and integrity checks. It rejects duplicate frontmatter names so moving a file or
+adding a category cannot silently shadow another skill.
 
 ---
 
@@ -101,6 +112,7 @@ that send traffic or change the brain append their exit code to `targets/<t>/log
 | `wildcard-check.py` | Re-verifies a hostname list against DNS wildcards **independently of whatever produced it** — two impossible labels per parent, and every child of a parent that answers is dropped. Exists because a resolver's own filter is not enough: on one run puredns reported 11 wildcard roots, still left 21 artifacts in its output and missed 4 real parents. Exit 1 = wildcards filtered, 2 = could not check. | **EXEC** — after any brute/permutation stage, before results reach `recon/subdomains.txt` |
 | `init-target.py` | Scaffolds a target brain atomically: builds in a temp dir and renames, so an interrupted run leaves nothing. Refuses to overwrite, asserts all 12 required files, derives the allowlist only from domain-shaped scope. | **EXEC** — once per target |
 | `preflight.py` | *What does this skill have to work with?* Parses the skill's own `## Inputs` section rather than a second registry, resolves its roles, and reports what is present. The one thing it flags as blocking is a **missing required input** — the admission gate (exit 1: cannot run as asked). It does **not** gate on scope, accounts or calibration; the hunter decides those. A prompt-subject skill reports PROMPT-CHECK REQUIRED until `--provided` confirms the subject. | **EXEC** — before every skill |
+| `skilllib.py` | The one recursive skill-body resolver. Discovers categorized bodies from frontmatter, resolves stable slugs and partial names, reports the canonical repository path, and rejects duplicate slugs. | Imported, never run directly |
 | `graph.py` | The dependency graph, **computed** from each skill's `## Inputs` joined against the role table — `--entry` answers "where do I start", `--check` runs in CI. It replaced a hand-written graph in which every phase number was wrong after a renumbering, including a bullet that contradicted itself in one sentence; prose cannot be executed, so it drifted silently. | **EXEC** — when the next move is unclear |
 | `roles.py` | Resolves an input role (`@hosts.resolved`) to a path through the one `## Input roles` table in `target-schema.md`. Exists because a path written into two dozen playbooks rots in two dozen places — `host-correlation-and-clustering` blocked on five filenames that were missing their `recon/` prefix, while every one of those files existed. An unknown role fails loudly with near misses. | **EXEC** — whenever a command needs a brain path |
 | `vps.sh` | Runs a command on the VPS, or moves a file across the boundary. Replaces holding the connection in a shell variable, which works in bash and silently fails in zsh — the trap that has bitten this repo three times. Stable `argv[0]`, so it can be allowlisted once. | **EXEC** — every remote command |
@@ -154,7 +166,7 @@ silently invalidated every cross-reference: the hand-written dependency graph en
 reference to a phase that did not exist, and a bullet contradicting itself in one sentence. Slugs
 cannot drift that way, and `tools/graph.py` now computes the graph rather than restating it.
 
-`init-target` moved to `skills/init-target.md`; the directory no longer exists.
+`init-target` now lives at `skills/setup/init-target.md`; `playbooks/recon/` no longer exists.
 
 ---
 
@@ -382,7 +394,7 @@ Where each piece actually enters, start to finish.
 | 2 | Orient | `tools/brief.py`, `tools/config.py check`, `TARGETS.md` |
 | 3 | Human names a target | `targets/<t>/index.md` · `target.md` · `scope.md` · `accounts.md` |
 | 4 | Human asks for something | a skill fires → **one** playbook loads |
-| 5 | New target? | the router → `skills/init-target.md` → `tools/init-target.py` → the brain exists, then STOP |
+| 5 | New target? | the router → `skills/setup/init-target.md` → `tools/init-target.py` → the brain exists, then STOP |
 | 6 | Before any traffic | `tools/preflight.py` (missing required input = stop) → `tools/kb.py run --status running` |
 | 7 | Select the supplied subject | one exact host or the applicable recorded set; ingest tools reconcile newly discovered outside data |
 | 8 | The command | HTTP: `tools/vps-run.py` → local privacy/attribution boundary → VPS `run.py`; non-HTTP: `run.py` directly. Both record evidence. |

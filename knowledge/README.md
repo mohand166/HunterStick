@@ -40,7 +40,7 @@ Re-evaluate the javascript-analysis skill using knowledge/javascript-analysis.
 Re-evaluate the IDOR playbook using knowledge/idor-bola.
 ```
 
-This invokes `skills/ground-a-playbook.md`. The model:
+This invokes `skills/maintenance/ground-a-playbook.md`. The model:
 
 1. resolves exactly one existing skill or playbook;
 2. checks which files are new or changed;

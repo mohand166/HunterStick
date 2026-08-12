@@ -2,7 +2,7 @@
 
 Every target is a self-contained knowledge base with **fixed, conventional paths** so
 any skill always knows where each kind of data lives. To start a new target, say
-**"Initialize a new target XYZ"** — `skills/init-target.md` copies
+**"Initialize a new target XYZ"** — `skills/setup/init-target.md` copies
 `targets/_template/` to `targets/<slug>/`, seeds it, and asserts every path below exists.
 
 The rule that makes the "memory" work: **paths are conventions, not guesses.** When the
@@ -58,6 +58,7 @@ targets/<target>/
   attack-surface.md     ← RANKED inventory. The recon→testing bridge. Scored (see model).
   hypotheses.md         ← testing backlog: id · target · class · rationale · status
   tested.md             ← dedup log: what was tested, when, result, fix-locus key
+  user-flows.md         ← journeys through the app: steps, principals, objects and state changes
   clusters.md           ← backend clusters (host-correlation-and-clustering); attack-surface.md links to these
   runs.tsv              ← APPEND-ONLY record of BOUNDED runs: run_id · phase · selector ·
                           sources · status · limitations. A phase is never globally done;
@@ -300,6 +301,29 @@ safe field names and match count; never the value, its context, or a value-deriv
 `severity_hint` stays `untriaged (scanner:<level>)` and `verified` stays `no` until the skill's
 triage loop resolves them. Endpoint/route rows are the deterministic handoff to
 `derive-properties`, which alone assigns supported properties and writes attack-surface rows.
+
+### Vulnerability evidence filenames
+
+Every vulnerability test stores one local evidence bundle at:
+
+```text
+raw/<run-id>-<class>-<case>/
+  evidence.md             mandatory manifest: entrypoint, principal, variant, oracle,
+                          redactions, command-record pointer, present files
+  control-request.txt     normal/role-correct request, when the channel is HTTP/RPC
+  control-response.txt    its real response
+  test-request.txt        one-variable test request
+  test-response.txt       its real response
+  browser-evidence.md     optional DOM/navigation/message proof
+  oob-callback.txt        optional unique callback log
+  transport-evidence.txt  optional gRPC trailer or WebSocket-frame proof
+```
+
+`<case>` is a short entrypoint/variant slug; it prevents two variants in one run overwriting each
+other. `evidence.md` always exists. Channel-specific files exist only when real evidence exists — a
+browser-only test does not create empty HTTP placeholders. Credentials are replaced with
+`<accounts.md:label>`. `tested.md.artifact_ptr` points to `evidence.md`, which in turn names the
+individual files and the matching `logs/exec/<stamp>-<skill>-<tool>.json` record.
 
 **`attack-surface.md`** (ranked; scoring model below) — one row per **candidate
 `(entrypoint × vuln_class)`**, not per generic asset (derive-properties). Group rows by entrypoint so

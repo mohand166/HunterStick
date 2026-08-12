@@ -22,7 +22,7 @@ resolve the target  →  load the named skill  →  verify its required inputs
 1. **Resolve.** The hunter names the target; `targets/<name>/` is its context. A pasted host is
    matched against each `targets/*/scope.md` only to decide **which brain it belongs in** — that
    is bookkeeping, not authorisation. There is no active or last target.
-2. **Load.** Map their words to **exactly one skill**. Read `skills/_recon-method.md` plus that
+2. **Load.** Map their words to **exactly one skill**. Read `skills/shared/_recon-method.md` plus that
    one file — or, for hunting, `_master-vuln-hunting.md` plus one class file. Never the library.
 3. **Verify inputs.** `tools/preflight.py <t> <skill>`. A required input missing → name it, name
    the skill that produces it, stop. An optional input missing → run, and say what it cost. This is
@@ -124,7 +124,7 @@ this file used to hold stale copies of all three.
 | you need | it is in |
 |---|---|
 | routing — what the hunter said → what to load | `AGENTS.md` |
-| the recon loop, in full | `skills/_recon-method.md` |
+| the recon loop, in full | `skills/shared/_recon-method.md` |
 | the hunting loop, in full | `playbooks/vulns/_master-vuln-hunting.md` |
 | what a skill needs and produces | that skill's own `## Inputs` / `## Outputs` |
 | what produces what | `tools/graph.py` — computed, never written down |

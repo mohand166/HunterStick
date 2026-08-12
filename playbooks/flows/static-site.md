@@ -22,14 +22,14 @@ Host in `scope.md`.
 
 1. **Takeover.** The one high-severity bug static hosts really have. Check the CNAME chain for a
    third-party service that no longer claims the name.
-   → `skills/dns-analysis.md` → `playbooks/vulns/subdomain-takeover.md`
+   → `skills/know-your-target/dns-analysis.md` → `playbooks/vulns/subdomain-takeover.md`
    Dangling ≠ exploitable — confirm the service actually permits claiming it before calling it
    anything.
 2. **Cache.** Static + CDN is the natural home of cache deception and poisoning: unkeyed headers, a
    path-confusion suffix that gets cached, an origin that trusts `X-Forwarded-*`.
    → `playbooks/vulns/cache-poisoning.md`
 3. **Storage behind it.** An S3/GCS/Azure origin serving the site is often listable or writable.
-   → `skills/cloud-asset-discovery.md`
+   → `skills/external-assets/cloud-asset-discovery.md`
 4. **A bounded content check — not a fuzz.** Static hosts do break on files nobody meant to
    publish, and a build pipeline is what publishes them. But running content-discovery with a general
    wordlist against a CDN brochure is thousands of requests to learn nothing.
@@ -42,7 +42,7 @@ Host in `scope.md`.
    generic list.
 
    Calibrate first anyway: a CDN that answers 200 for everything makes all of it noise.
-   → `skills/content-discovery.md` for the method, with an explicit small selector.
+   → `skills/surface-discovery/content-discovery.md` for the method, with an explicit small selector.
 
    Two dozen requests. If it finds nothing, that is the fourth clean check and the triage below
    stands.

@@ -240,6 +240,16 @@ def build(tmp, slug, args, shape, entry):
                           "- **Consequence:** no authenticated work. `idor-bola`, "
                           "`function-level-authorization`, `multi-tenant-isolation` and "
                           "`privilege-escalation` are blocked, not untested.")
+    else:
+        # omitted is a legitimate answer: unknown, recorded as a blocker (mirrors the index.md
+        # blocker above). Leaving the `<menu>` placeholder would trip verify() — and a menu that
+        # looks like a value reads as "answered" when nothing was established.
+        t = t.replace("<self-register allowed | provided accounts | none | unknown>",
+                      f"TBD — blocking: account availability never established at init, {today}")
+        t = t.replace("- **Consequence:** <what authenticated work is possible or blocked>",
+                      "- **Consequence:** until availability is established, `idor-bola`, "
+                      "`function-level-authorization`, `multi-tenant-isolation` and "
+                      "`privilege-escalation` are unknown, not untested.")
     p.write_text(t, encoding="utf-8")
 
     # `<TARGET>` in EVERY file, not a hand-kept list of five. Eleven files — every recon/*.md,

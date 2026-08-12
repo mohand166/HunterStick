@@ -23,7 +23,7 @@ One human decision still authorizes everything that happens. That is the whole d
 only holds if you keep the three rules below.
 
 ### 1. Two intents — read which one you were given
-This is the contract in `skills/run-flow.md`, and this index follows it, not the reverse.
+This is the contract in `skills/orchestration/run-flow.md`, and this index follows it, not the reverse.
 
 - *"What should I run on acme?"* · *"this host 404s everything"* — a request for a
   **recommendation**. Name the flow, print its steps, cost and abort points, **and stop.**

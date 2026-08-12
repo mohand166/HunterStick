@@ -218,7 +218,7 @@ what the tool printed, so an `ffuf` that exits 0 and leaves an empty file is rep
 failure it is.
 
 It no longer validates scope, rate or method. That policy engine was ~310 lines and it was
-deleted deliberately: command correctness belongs to the model (`skills/_recon-method.md` — read
+deleted deliberately: command correctness belongs to the model (`skills/shared/_recon-method.md` — read
 the installed binary's help, pilot, verify the output shape, adapt), and scope is the hunter's
 (`AGENTS.md` §*Scope is the hunter's*). **A recorder that always runs beats a validator that never
 did** — and that validator never did: `logs/exec/` held zero records for an entire engagement.

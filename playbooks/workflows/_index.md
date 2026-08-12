@@ -31,7 +31,7 @@ API that flow found. Recon side, then test side.
 
 | file | when |
 |---|---|
-| [`../../skills/analyse-request.md`](../../skills/analyse-request.md) | the human pastes a **raw HTTP request**. The entry point: scope, credential, properties, a row in `attack-surface.md` |
+| [`../../skills/analysis/analyse-request.md`](../../skills/analysis/analyse-request.md) | the human pastes a **raw HTTP request**. The entry point: scope, credential, properties, a row in `attack-surface.md` |
 | [`import-traffic.md`](import-traffic.md) | a **HAR or Burp export** — an hour of browsing turned into structured endpoints |
 | [`recover-js-chunks.md`](recover-js-chunks.md) | saved entry bundles from a code-split app — recover the authorized lazy-chunk graph without executing it |
 | [`investigate-api-surface.md`](investigate-api-surface.md) | testing an **HTTP/JSON API as an API** — verbs, versions, parsers |

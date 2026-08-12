@@ -142,6 +142,12 @@ one place the loop can quietly turn a one-class request into a twelve-class swee
   response** — never assume or narrate output you didn't see.
 - Save the request + response to `raw/` (or the investigation folder). **A vuln FACT
   requires this artifact.** No artifact → HYPOTHESIS only.
+- Use the fixed evidence bundle from `target-schema.md`:
+  `raw/<run-id>-<class>-<case>/evidence.md`, with `control-request.txt`,
+  `control-response.txt`, `test-request.txt`, and `test-response.txt` for HTTP/RPC. Browser, OOB,
+  gRPC and WebSocket evidence use the optional channel filenames defined there. Do not leave the
+  artifact as an unnamed file in `raw/`; the next session must resolve it from
+  `tested.md.artifact_ptr` without reading the transcript.
 
 ### 6. Filter false positives
 - Work through the class file's "False-positive traps." Did a WAF reflect? Is the error

@@ -12,6 +12,41 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def skill_files():
+    return sorted(path for path in (ROOT / "skills").rglob("*.md")
+                  if path.name != "README.md" and not path.name.startswith("_"))
+
+
+def skill_path(slug):
+    matches = [path for path in skill_files() if path.stem == slug]
+    if len(matches) != 1:
+        raise AssertionError(f"expected one skill '{slug}', found {matches}")
+    return matches[0]
+
+
+class SkillDiscoveryTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.skilllib = load_tool("skilllib")
+
+    def test_nested_library_exposes_every_runtime_skill_once(self):
+        discovered = self.skilllib.discover()
+        runtime = {path.parent.name for path in
+                   (ROOT / ".claude" / "skills").glob("*/SKILL.md")}
+        self.assertEqual(runtime, set(discovered))
+        self.assertEqual(32, len(discovered))
+
+    def test_duplicate_slug_fails_loudly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for category in ("one", "two"):
+                path = root / category / "same.md"
+                path.parent.mkdir()
+                path.write_text("---\nname: duplicate\ndescription: test\n---\n")
+            with self.assertRaisesRegex(ValueError, "duplicate skill slug"):
+                self.skilllib.discover(root)
+
+
 def load_tool(name):
     path = ROOT / "tools" / f"{name}.py"
     spec = importlib.util.spec_from_file_location(f"test_{name}", path)
@@ -745,7 +780,7 @@ class TargetBrainGrowsTests(unittest.TestCase):
         It moved out of phase-routing.md when that file's hand-written dependency graph was
         deleted — every number in it was wrong, and tools/graph.py computes the graph now.
         """
-        t = (ROOT / "skills" / "_recon-method.md").read_text()
+        t = (ROOT / "skills" / "shared" / "_recon-method.md").read_text()
         self.assertIn("kb.py patterns", t)
         self.assertIn("kb.py reassess", t)
         self.assertIn("target.md", t)
@@ -1079,7 +1114,7 @@ class PreflightTests(unittest.TestCase):
         """The whole value: a dead end becomes a next step."""
         with tempfile.TemporaryDirectory() as tmp:
             d = self._t(tmp)
-            sf = ROOT / "skills" / "derive-properties.md"
+            sf = skill_path("derive-properties")
             _, missing, _, _ = pre.check(d, sf)
             self.assertTrue(missing, "an empty brain must report missing inputs")
             producers = {row[3] for row in missing}
@@ -1091,7 +1126,7 @@ class PreflightTests(unittest.TestCase):
         would report blockers on a skill that can run right now."""
         with tempfile.TemporaryDirectory() as tmp:
             d = self._t(tmp, **{"recon/live-hosts.txt": "https://a.acme.com\n"})
-            sf = ROOT / "skills" / "derive-properties.md"
+            sf = skill_path("derive-properties")
             _, missing, optional, _ = pre.check(d, sf)
             self.assertEqual([], [m for m in missing if m[1] is not None],
                              "one present member should satisfy the whole any-of group")
@@ -1103,7 +1138,7 @@ class PreflightTests(unittest.TestCase):
         Unconfirmed -> prompt_needed (and exit 1); --provided -> present (and exit 0)."""
         with tempfile.TemporaryDirectory() as tmp:
             d = self._t(tmp)
-            sf = ROOT / "skills" / "analyse-request.md"
+            sf = skill_path("analyse-request")
             present, missing, _optional, prompt = pre.check(d, sf)
             self.assertTrue(prompt, "an unconfirmed @hunter.* subject must land in prompt_needed")
             self.assertFalse(any(r[0].startswith("@hunter.") for r in present),
@@ -1118,7 +1153,7 @@ class PreflightTests(unittest.TestCase):
         """A hunter-named host must not require the whole recon pipeline first."""
         with tempfile.TemporaryDirectory() as tmp:
             d = self._t(tmp)
-            sf = ROOT / "skills" / "url-collection.md"
+            sf = skill_path("url-collection")
             present, missing, optional, prompt = pre.check(
                 d, sf, provided=["@hunter.host"])
             self.assertFalse(missing)
@@ -1130,7 +1165,7 @@ class PreflightTests(unittest.TestCase):
         """A multi-host run must not ask for a redundant hunter-named host."""
         with tempfile.TemporaryDirectory() as tmp:
             d = self._t(tmp, **{"recon/live-hosts.txt": "https://a.acme.com\n"})
-            sf = ROOT / "skills" / "url-collection.md"
+            sf = skill_path("url-collection")
             _present, missing, _optional, prompt = pre.check(d, sf)
             self.assertFalse(missing)
             self.assertFalse(prompt)
@@ -1139,7 +1174,7 @@ class PreflightTests(unittest.TestCase):
         """Archive collection can cover enumerated names before every name is HTTP-live."""
         with tempfile.TemporaryDirectory() as tmp:
             d = self._t(tmp, **{"recon/subdomains.txt": "a.acme.com\nb.acme.com\n"})
-            sf = ROOT / "skills" / "url-collection.md"
+            sf = skill_path("url-collection")
             present, missing, optional, prompt = pre.check(d, sf)
             self.assertFalse(missing)
             self.assertFalse(prompt)
@@ -1158,7 +1193,7 @@ class PreflightTests(unittest.TestCase):
             for slug in host_or_set:
                 with self.subTest(skill=slug):
                     present, missing, _optional, prompt = pre.check(
-                        d, ROOT / "skills" / f"{slug}.md", provided=["@hunter.host"])
+                        d, skill_path(slug), provided=["@hunter.host"])
                     self.assertFalse(missing)
                     self.assertFalse(prompt)
                     self.assertTrue(any(row[0] == "@hunter.host" for row in present))
@@ -1182,7 +1217,7 @@ class PreflightTests(unittest.TestCase):
         for slug, wanted in expected.items():
             with self.subTest(skill=slug):
                 declared = pre.declared_inputs(
-                    (ROOT / "skills" / f"{slug}.md").read_text(encoding="utf-8"))
+                    skill_path(slug).read_text(encoding="utf-8"))
                 grouped = {role for role, _path, _required, in_group in declared if in_group}
                 self.assertEqual(wanted, grouped)
 
@@ -1211,7 +1246,7 @@ class PreflightTests(unittest.TestCase):
                 with self.subTest(skill=slug):
                     d = self._t(Path(tmp) / slug, **{path: contents})
                     _present, missing, _optional, prompt = pre.check(
-                        d, ROOT / "skills" / f"{slug}.md")
+                        d, skill_path(slug))
                     self.assertFalse(missing)
                     self.assertFalse(prompt)
 
@@ -1306,7 +1341,7 @@ class InitTargetTests(unittest.TestCase):
         for scope in ("*.acme.com", "10.0.0.0/24", "app.acme.com", "Globex Corporation"):
             entry = init.classify(scope)[1]
             for slug in (s.strip() for s in entry.split("/")):
-                self.assertTrue((ROOT / "skills" / f"{slug}.md").exists(),
+                self.assertTrue(skill_path(slug).exists(),
                                 f"{scope} suggests '{slug}', which is not a skill")
 
     def test_every_schema_file_is_required_before_the_rename(self):
@@ -2046,7 +2081,7 @@ class DeclaredInputNegationTests(unittest.TestCase):
         times each. And it must never require the HTTP-only set, which would drop exactly the
         hosts this skill exists to find: a box serving only 50051, 9443, SSH or SMTP.
         """
-        sf = ROOT / "skills" / "port-and-service-discovery.md"
+        sf = skill_path("port-and-service-discovery")
         required = [r for r, _p, req, _g in self.pf.declared_inputs(
             sf.read_text(encoding="utf-8")) if req]
         self.assertIn("@net.ips", required, "the scan unit is the deduplicated address")
@@ -3040,7 +3075,7 @@ class ResumeRoutingTests(unittest.TestCase):
                 self.brief.monitor_resume_state = original_monitor
         self.assertEqual(0, rc)
         self.assertIn("Load these", out)                 # the block rendered — not empty
-        self.assertIn("skills/subdomain-enumeration.md", out,   # POSITIVE: real slug
+        self.assertIn("skills/know-your-target/subdomain-enumeration.md", out,   # POSITIVE: real slug
                       f"resume did not route to the current skill:\n{out}")
         self.assertNotRegex(out, r"\b\d\d-[a-z-]+ playbook",
                             "resume still emits a numbered playbook name")
@@ -3265,7 +3300,7 @@ class InputRoleTests(unittest.TestCase):
         import re
         table = self.roles.load()
         bad = []
-        for pf_file in sorted((ROOT / "skills").glob("*.md")):
+        for pf_file in skill_files():
             for role in set(re.findall(r"`(@[\w.]+)`", pf_file.read_text(encoding="utf-8"))):
                 if role not in table:
                     bad.append(f"{pf_file.name}: {role}")
@@ -3275,7 +3310,7 @@ class InputRoleTests(unittest.TestCase):
         """The whole point: a recon artifact is named in the table, not in 23 playbooks."""
         import re
         bad = []
-        for pf_file in sorted((ROOT / "skills").glob("*.md")):
+        for pf_file in skill_files():
             text = pf_file.read_text(encoding="utf-8")
             m = re.search(r"^## Inputs\s*$(.*?)(?=^## )", text, re.M | re.S)
             if not m:
@@ -3288,7 +3323,7 @@ class InputRoleTests(unittest.TestCase):
         """Renumbering left all seven of these pointing at their OLD phase number."""
         import re
         bad = []
-        for pf_file in sorted((ROOT / "skills").glob("*.md")):
+        for pf_file in skill_files():
             for hit in re.findall(r"/tmp/<t>-\d+-", pf_file.read_text(encoding="utf-8")):
                 bad.append(f"{pf_file.name}: {hit}")
         self.assertEqual([], bad, f"phase-numbered temp paths rot on renumber: {bad}")
@@ -3405,7 +3440,7 @@ class SkillGraphTests(unittest.TestCase):
         skip = {"vuln-hunt", "run-flow", "analyse-request", "tech-analysis",
                 "ground-a-playbook", "init-target"}
         bad = []
-        for f in sorted(d.glob("*.md")):
+        for f in skill_files():
             if f.stem in skip:      # these still reference the legacy tree; Stage 5 cleans them
                 continue
             for m in _re.finditer(r"`(\d{2})-[a-z-]+`|\bphase (\d{1,2})\b",
@@ -3434,9 +3469,8 @@ class SkillContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.dir = ROOT / "skills"
-        cls.files = sorted(p for p in cls.dir.glob("*.md")
-                           if not p.name.startswith("_")
-                           and p.stem not in cls.NOT_RECON) if cls.dir.is_dir() else []
+        cls.files = [p for p in skill_files()
+                     if p.stem not in cls.NOT_RECON] if cls.dir.is_dir() else []
 
     def setUp(self):
         if not self.files:
@@ -3759,8 +3793,7 @@ class DocumentedCountTests(unittest.TestCase):
              "forty-five": 45, "forty-eight": 48}
 
     def _live(self):
-        n_skills = len([p for p in (ROOT / "skills").glob("*.md")
-                        if not p.name.startswith("_")])
+        n_skills = len(skill_files())
         n_tools = len(list((ROOT / "tools").glob("*.py")) + list((ROOT / "tools").glob("*.sh")))
         n_flows = len([p for p in (ROOT / "playbooks" / "flows").glob("*.md")
                        if not p.name.startswith("_")])
@@ -3880,8 +3913,7 @@ class CatalogueCoverageTests(unittest.TestCase):
     def setUpClass(cls):
         cls.text = cls.CATALOGUE.read_text(encoding="utf-8")
         cls.named = set(re.findall(r"`([a-z][a-z0-9-]+)`", cls.text))
-        cls.skills = {p.stem for p in (ROOT / "skills").glob("*.md")
-                      if not p.name.startswith("_")}
+        cls.skills = {p.stem for p in skill_files()}
         cls.flows = {p.stem for p in (ROOT / "playbooks" / "flows").glob("*.md")
                      if not p.name.startswith("_")}
 
@@ -4510,8 +4542,8 @@ class ControlContractTests(unittest.TestCase):
 
     def test_every_invocable_skill_declares_a_contract(self):
         """A skill with no ## Inputs reports 'ready' whether or not its subject was supplied."""
-        bad = [f.stem for f in sorted((ROOT / "skills").glob("*.md"))
-               if not f.name.startswith("_") and "\n## Inputs" not in f.read_text(encoding="utf-8")]
+        bad = [f.stem for f in skill_files()
+               if "\n## Inputs" not in f.read_text(encoding="utf-8")]
         self.assertEqual([], bad, f"skills with no input contract: {bad}")
 
     def test_skills_whose_subject_comes_from_the_prompt_say_so(self):
@@ -4520,7 +4552,7 @@ class ControlContractTests(unittest.TestCase):
         for slug, role in (("analyse-request", "@hunter.request"),
                            ("vuln-hunt", "@hunter.class"),
                            ("tech-analysis", "@hunter.technology")):
-            t = (ROOT / "skills" / f"{slug}.md").read_text(encoding="utf-8")
+            t = skill_path(slug).read_text(encoding="utf-8")
             self.assertIn(role, t, f"{slug} must declare {role}")
 
     def test_the_control_layer_does_not_contradict_itself_on_scope(self):
@@ -4583,7 +4615,7 @@ class ControlContractTests(unittest.TestCase):
         vocab = cov.parse_property_vocabulary()
         # only the backticked tokens that look like vocabulary entries, in property context
         bad = []
-        for p in sorted((ROOT / "skills").glob("*.md")):
+        for p in skill_files():
             text = p.read_text(encoding="utf-8")
             for tok in set(_re.findall(r"`([a-z][a-z0-9]+(?:-[a-z0-9]+)+)`", text)):
                 if tok in {"concurrency", "ambiguous-framing", "parses-structured"}:

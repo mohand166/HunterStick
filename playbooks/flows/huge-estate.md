@@ -15,9 +15,9 @@ Live-host count in the hundreds or more, and no single application is obviously 
 
 ## Steps
 
-1. **Fingerprint enough to group by.** → `skills/technology-fingerprinting.md` — server,
+1. **Fingerprint enough to group by.** → `skills/surface-discovery/technology-fingerprinting.md` — server,
    framework, headers, favicon hash, TLS cert, error-page shape.
-2. **Cluster.** → `skills/host-correlation-and-clustering.md`. Write `clusters.md`
+2. **Cluster.** → `skills/context-and-prioritization/host-correlation-and-clustering.md`. Write `clusters.md`
    with a named representative per cluster.
    **A cluster is a HYPOTHESIS that these hosts behave alike — not a proven testing unit.** A
    shared server banner, favicon hash or TLS cert says they were built from one image; it says
@@ -34,7 +34,7 @@ Live-host count in the hundreds or more, and no single application is obviously 
    production APIs are the single most productive pattern on a large estate** — same code, weaker
    controls, far less attention.
 4. **Find the same endpoint on the weaker sibling.**
-   → `skills/cross-host-endpoint-reuse.md`. An object id obtained legitimately on prod,
+   → `skills/context-and-prioritization/cross-host-endpoint-reuse.md`. An object id obtained legitimately on prod,
    replayed against `trunk.`/`ha.`/per-DC instances, is the estate-scale authz test.
 5. **If the hunter asks to rank, rank clusters, not hosts.** → `attack-surface-prioritization`, scoring per cluster.
 6. **Then go deep on one.** Pick the top cluster's representative and switch to the flow that fits

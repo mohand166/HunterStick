@@ -65,7 +65,8 @@ equally true of a Django app, it belongs in a class playbook, not here.
 
 ## Add a recon skill
 
-1. Create `skills/<name>.md`. Use `skills/http-probing.md` as the model and follow the shape the
+1. Choose the narrowest category in `skills/README.md`, then create
+   `skills/<category>/<name>.md`. Use `skills/know-your-target/http-probing.md` as the model and follow the shape the
    tests enforce: framing blockquote → `## Objective` → `## Inputs` → `## Signals` →
    `## Known traps` → `## Outputs` → `## Exit criteria` → `## Next`.
 2. Add YAML frontmatter (`name`, `description`) — the description is what a runtime matches on.
@@ -79,8 +80,9 @@ equally true of a Django app, it belongs in a class playbook, not here.
 6. Add one routing signal to `class-signals.md`. **Do not touch a dependency graph** — there
    isn't one to edit; `tools/graph.py` computes it from your `## Inputs`.
 7. Create the runtime pointer at `.claude/skills/<name>/SKILL.md` — frontmatter plus one line
-   pointing at the body. `self-check.py` asserts the two agree.
-8. **No flag lists, no invocation templates.** `skills/_recon-method.md` owns tool correctness;
+   pointing at the categorized body. `self-check.py` asserts the two agree and rejects duplicate
+   slugs anywhere in the nested tree.
+8. **No flag lists, no invocation templates.** `skills/shared/_recon-method.md` owns tool correctness;
    your file owns the objective, the signals and the traps. A test enforces this.
 9. Run `python3 -m unittest discover -s tests` and `tools/self-check.py`.
 
@@ -130,7 +132,7 @@ knowledge/idor-bola/report-123.md
 
 Then say *"Re-evaluate the javascript-analysis skill using knowledge/javascript-analysis"* or
 *"Re-evaluate the IDOR playbook using knowledge/idor-bola."* That invokes
-`skills/ground-a-playbook.md` and performs one bounded loop:
+`skills/maintenance/ground-a-playbook.md` and performs one bounded loop:
 
 ```text
 new/changed knowledge -> compare with one destination -> KEEP or IMPROVE -> verify -> record -> STOP

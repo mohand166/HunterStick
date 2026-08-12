@@ -21,20 +21,20 @@ thing you run on a new engagement.
 1. **Subdomain enumeration.** Passive sources first, from the authorised enumeration roots
    (`tools/scope-filter.py <t> --roots`). A wildcard is a *seed*; an exact host authorises only
    itself, so a single-host scope skips straight to step 3.
-   → `skills/subdomain-enumeration.md`
+   → `skills/know-your-target/subdomain-enumeration.md`
 2. **Live host validation.** Resolution and reachability. Turns an enumeration list into a
    working set, and the ratio is itself informative: 4,000 names resolving to 40 hosts means a
    wildcard DNS record, not an estate.
-   → `skills/live-host-validation.md`
+   → `skills/know-your-target/live-host-validation.md`
 3. **HTTP probing.** Status, title, redirect chain, server. **This is the step that pays**:
    titles and redirects are where admin portals, CMS installs and login walls announce themselves.
    Append the notable ones to `attack-surface.md` as you go — rank empty, `why` filled.
-   → `skills/http-probing.md`
+   → `skills/know-your-target/http-probing.md`
 4. **Technology fingerprinting.** Server, framework, version, favicon hash, error shape. This
    is what makes everything afterwards cheap: `host-correlation-and-clustering`, tech-risk scoring
    in `attack-surface-prioritization`, and the n-day cohorts you will want the next time a CVE
    lands.
-   → `skills/technology-fingerprinting.md`
+   → `skills/surface-discovery/technology-fingerprinting.md`
 
 **Conditional, by scope shape** — insert before step 1 when they apply:
 `dns-analysis` when the wildcard is large enough that CNAME chains matter, or when takeover is

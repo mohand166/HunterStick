@@ -32,7 +32,7 @@ Host in `scope.md`. Nothing else.
    `multi-tenant-isolation` is the class. A property in a class column is a row no tool can resolve.
 2. **Map the auth surface itself — it is the target now.** Login, registration (even if closed),
    password reset, MFA, OAuth/SSO, magic links, session issuance.
-   → `skills/authentication-surface-mapping.md`
+   → `skills/application-understanding/authentication-surface-mapping.md`
 3. **Work the pre-auth classes.** These need no account by definition:
    `subdomain-takeover` · `cache-poisoning` · `cache-deception` · `cors` · `ssrf` (where an unauth
    entrypoint fetches) · `open-redirect` · `host-header` · `info-disclosure` · `xxe` on unauth

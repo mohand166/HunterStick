@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import skilllib  # noqa: E402
 from scopelib import parse_scope                                  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -43,8 +44,12 @@ def resume_skill(raw):
     if not raw:
         return None, None
     slug = re.sub(r"^(?:phase[-_]?)?\d+[-_]?", "", str(raw).strip()).strip("-_ ")
-    if (ROOT / "skills" / f"{slug}.md").is_file():
-        return slug, f"skills/{slug}.md"
+    try:
+        path = skilllib.resolve(slug)
+    except (KeyError, ValueError):
+        return slug, None
+    if skilllib.skill_name(path) == slug:
+        return slug, skilllib.relative(path)
     return slug, None
 
 

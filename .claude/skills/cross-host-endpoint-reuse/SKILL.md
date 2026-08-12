@@ -3,7 +3,7 @@ name: cross-host-endpoint-reuse
 description: The routes that still route, on the host nobody rebuilt. Use for "cross host endpoint reuse" and closely related asks.
 ---
 
-Read `skills/cross-host-endpoint-reuse.md` and follow it.
+Read `skills/context-and-prioritization/cross-host-endpoint-reuse.md` and follow it.
 
 That file is the single body for this skill; this pointer exists only so Claude Code
 can auto-trigger on the description above. Every other runtime dispatches to the same

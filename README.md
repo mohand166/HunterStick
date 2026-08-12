@@ -286,7 +286,7 @@ The method is split deliberately:
 - A **thin focused file** carries what is unique to the objective: required inputs, useful signals,
   target-specific traps, outputs, variants, and exit criteria.
 - A **shared method file** carries the reusable reasoning loop. Recon skills share
-  [`skills/_recon-method.md`](skills/_recon-method.md); vulnerability classes share
+  [`skills/shared/_recon-method.md`](skills/shared/_recon-method.md); vulnerability classes share
   [`_master-vuln-hunting.md`](playbooks/vulns/_master-vuln-hunting.md).
 - The **target brain** supplies the current evidence and remembers every useful delta.
 - Small tools provide the mechanical harness around the model: resolve inputs, open the run,
@@ -580,9 +580,14 @@ links are here so you can inspect, edit, or audit the fieldcraft the model will 
 
 ### Recon skills
 
-Every recon objective loads the shared [recon method](skills/_recon-method.md) plus one focused
+Every recon objective loads the shared [recon method](skills/shared/_recon-method.md) plus one focused
 skill. The shared file provides the adaptive tool loop; the focused file defines the required
 inputs, signals, traps, outputs, and exit criteria for that objective.
+
+The [skill library](skills/) is grouped by hunting intent so a hunter can browse it without knowing
+repository paths in advance. Categories are navigation only: ask for `http-probing`, and the
+runtime resolves its body under `skills/know-your-target/`. Invocation names stay stable if a skill
+moves between categories.
 
 Host-level skills accept either one exact host named by the hunter or the applicable target-brain
 host set. Naming `app.acme.com` does not require estate-wide enumeration first and never silently
@@ -591,19 +596,19 @@ cross-host replay—remain explicitly set-based.
 
 | What you ask for | Focused skill |
 |---|---|
-| “Identify the organization's roots.” | [Organization and roots](skills/organization-and-roots.md) |
-| “Enumerate subdomains for acme.” | [Subdomain enumeration](skills/subdomain-enumeration.md) |
-| “Resolve and validate these hosts.” | [Live-host validation](skills/live-host-validation.md) |
-| “Probe the web estate.” | [HTTP probing](skills/http-probing.md) |
-| “Fingerprint the technologies.” | [Technology fingerprinting](skills/technology-fingerprinting.md) |
-| “Collect URLs for `app.acme.com` or across acme's subdomains.” | [URL collection](skills/url-collection.md) — exact-host, enumerated-subdomain, and live-host selectors use the same per-host method |
-| “Discover hidden content.” | [Content discovery](skills/content-discovery.md) |
-| “Extract routes and secrets from JavaScript.” | [JavaScript analysis](skills/javascript-analysis.md) |
-| “Map this application.” | [Application mapping](skills/application-mapping.md) |
-| “Recover the API contract.” | [API discovery](skills/api-discovery.md) |
-| “Find accepted parameters.” | [Parameter discovery](skills/parameter-discovery.md) |
-| “Turn these endpoints into testable properties.” | [Derive properties](skills/derive-properties.md) |
-| “Prioritize the attack surface.” | [Attack-surface prioritization](skills/attack-surface-prioritization.md) |
+| “Identify the organization's roots.” | [Organization and roots](skills/know-your-target/organization-and-roots.md) |
+| “Enumerate subdomains for acme.” | [Subdomain enumeration](skills/know-your-target/subdomain-enumeration.md) |
+| “Resolve and validate these hosts.” | [Live-host validation](skills/know-your-target/live-host-validation.md) |
+| “Probe the web estate.” | [HTTP probing](skills/know-your-target/http-probing.md) |
+| “Fingerprint the technologies.” | [Technology fingerprinting](skills/surface-discovery/technology-fingerprinting.md) |
+| “Collect URLs for `app.acme.com` or across acme's subdomains.” | [URL collection](skills/surface-discovery/url-collection.md) — exact-host, enumerated-subdomain, and live-host selectors use the same per-host method |
+| “Discover hidden content.” | [Content discovery](skills/surface-discovery/content-discovery.md) |
+| “Extract routes and secrets from JavaScript.” | [JavaScript analysis](skills/surface-discovery/javascript-analysis.md) |
+| “Map this application.” | [Application mapping](skills/application-understanding/application-mapping.md) |
+| “Recover the API contract.” | [API discovery](skills/surface-discovery/api-discovery.md) |
+| “Find accepted parameters.” | [Parameter discovery](skills/surface-discovery/parameter-discovery.md) |
+| “Turn these endpoints into testable properties.” | [Derive properties](skills/context-and-prioritization/derive-properties.md) |
+| “Prioritize the attack surface.” | [Attack-surface prioritization](skills/context-and-prioritization/attack-surface-prioritization.md) |
 
 Run `tools/preflight.py <target> --list` to see every available skill name. The complete repository
 map, including asset, infrastructure, synthesis, and handoff skills, is in
@@ -611,7 +616,7 @@ map, including asset, infrastructure, synthesis, and handoff skills, is in
 
 ### Vulnerability-hunting skills
 
-A vulnerability request enters through [vuln-hunt](skills/vuln-hunt.md). The runtime then loads the
+A vulnerability request enters through [vuln-hunt](skills/vulnerability-testing/vuln-hunt.md). The runtime then loads the
 shared [master hunting loop](playbooks/vulns/_master-vuln-hunting.md) plus exactly the class file
 you named. The [class index](playbooks/vulns/_index.md) maps broader requests such as “access
 control” or “business logic” to the applicable class files.
@@ -633,13 +638,13 @@ proof, how to reject false positives, and how to decide whether the result is no
 
 ### Monitoring subdomains, hosts, and JavaScript
 
-Monitoring uses the [monitoring-and-diff skill](skills/monitoring-and-diff.md) and
+Monitoring uses the [monitoring-and-diff skill](skills/monitoring/monitoring-and-diff.md) and
 [`tools/monitor.py`](tools/monitor.py). Enabling a recurring monitor is always an explicit user
 request; finishing recon does not schedule one automatically.
 
 The skill expects the target scope, the subdomain baseline produced by
-[subdomain enumeration](skills/subdomain-enumeration.md), and the live HTTP baseline produced by
-[HTTP probing](skills/http-probing.md). If one is missing, preflight names it and points to the
+[subdomain enumeration](skills/know-your-target/subdomain-enumeration.md), and the live HTTP baseline produced by
+[HTTP probing](skills/know-your-target/http-probing.md). If one is missing, preflight names it and points to the
 skill that produces it.
 
 #### Passive subdomain monitoring
@@ -708,19 +713,19 @@ external notifications in the current version.
 
 | What you ask for | Files the runtime follows |
 |---|---|
-| “Analyse this Burp request.” | [Request analysis](skills/analyse-request.md) |
+| “Analyse this Burp request.” | [Request analysis](skills/analysis/analyse-request.md) |
 | “Import this Burp or HAR capture.” | [Traffic-import workflow](playbooks/workflows/import-traffic.md) and [`import-http.py`](tools/import-http.py) |
 | “Recover the lazy JavaScript chunks.” | [Chunk-recovery workflow](playbooks/workflows/recover-js-chunks.md) and [`chunks.py`](tools/chunks.py) |
 | “Merge these saved jsluice/OpenAPI results into the brain.” | [`surface.py`](tools/surface.py) normalizes endpoints and parameters, safely reduces secret-shaped candidates without storing their values/context, and hands the resulting artifacts to property derivation without sending traffic |
-| “Run the dead-end-host flow.” | [Flow runner](skills/run-flow.md) and the selected [situation flow](playbooks/flows/) |
-| “What does this Django/Next.js/WordPress stack change?” | [Technology analysis](skills/tech-analysis.md) and the selected [technology reference](playbooks/tech/) |
-| “Chain these several existing tasks.” | [Task composition](skills/compose-task.md) |
+| “Run the dead-end-host flow.” | [Flow runner](skills/orchestration/run-flow.md) and the selected [situation flow](playbooks/flows/) |
+| “What does this Django/Next.js/WordPress stack change?” | [Technology analysis](skills/analysis/tech-analysis.md) and the selected [technology reference](playbooks/tech/) |
+| “Chain these several existing tasks.” | [Task composition](skills/orchestration/compose-task.md) |
 | “Show low-severity findings that may chain across these hosts.” | [`target-graph.py --chains`](tools/target-graph.py), [`kb.py chains`](tools/kb.py), and the [chain investigation template](targets/_template/investigations/chain.template.md) |
 | “Resume acme.” | [`brief.py --resume`](tools/brief.py), followed by the exact files it names |
 
 #### When no existing skill fits
 
-[Compose task](skills/compose-task.md) is the last-resort escape hatch for a user-requested
+[Compose task](skills/orchestration/compose-task.md) is the last-resort escape hatch for a user-requested
 objective that no single skill, flow, or workflow covers. The model first checks that an existing
 capability does not already fit, then breaks the request into ordered steps, reuses existing skills
 where possible, and writes only the minimum novel glue for what remains. It states the plan, traffic,
@@ -758,6 +763,7 @@ record, and verify the interface surface; they do not choose what the hunter sho
 | Document | Read it when you want to |
 |---|---|
 | [FILEMAP.md](FILEMAP.md) | Locate every repository and target-brain file and see when it enters context |
+| [SKILL-OUTPUTS.md](SKILL-OUTPUTS.md) | See what every recon skill, vulnerability class, flow, and workflow writes locally and on the VPS |
 | [TOOLS.md](TOOLS.md) | See what each tool reads, writes, sends, records, and refuses |
 | [CUSTOMIZE.md](CUSTOMIZE.md) | Customize skills, flows and playbooks—including re-evaluating one from your own local reports or research |
 | [AGENTS.md](AGENTS.md) | Read the canonical operating instructions followed by every runtime |

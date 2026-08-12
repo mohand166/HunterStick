@@ -202,7 +202,7 @@ situation is most of the skill, so the situations are listed here rather than on
 `tools/suggest-flows.py <target>` proves the ones it can from structured data and names the four it
 **cannot** (`dead-end-host`, `spa-frontend`, `api-surface`, `static-site` all need someone to look
 at a live response). A flow declares its steps, cost and abort points first; a named flow then runs
-without asking again, while *"what should I run?"* recommends and stops (`skills/run-flow.md`). It
+without asking again, while *"what should I run?"* recommends and stops (`skills/orchestration/run-flow.md`). It
 never sends a payload.
 
 ## Workflows — artifact or step → procedure

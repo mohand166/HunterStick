@@ -20,10 +20,10 @@
    artifact stores a placeholder plus a pointer.
    **Two accounts is the floor, not a nicety.** With one you cannot distinguish "authorized" from
    "unauthorized but unchecked."
-2. **Map the auth mechanics.** → `skills/authentication-surface-mapping.md` — how the
+2. **Map the auth mechanics.** → `skills/application-understanding/authentication-surface-mapping.md` — how the
    session is issued, carried, refreshed and revoked; what the token actually contains.
 3. **Map the application as a real user.** Every feature, every role, every state transition.
-   → `skills/application-mapping.md`
+   → `skills/application-understanding/application-mapping.md`
 4. **Write the user-journey table** — `targets/<t>/user-flows.md`: `name · steps · principals ·
    objects · state changes`. This is the artifact that makes business-logic testing possible; a
    feature list is not. *(Named `user-flows` deliberately: `playbooks/flows/` are research flows
@@ -49,9 +49,9 @@ Low traffic, high time. Days of human attention, not thousands of requests. Deli
 
 ## Output
 - `accounts.md` — principals, credential-referenced.
-- `applications/<host>/map.md` + `endpoints.md`; `targets/<t>/flows.md`.
+- `applications/<host>/map.md` + `endpoints.md`; `targets/<t>/user-flows.md`.
 - `attack-surface.md` with `object-ref` / `two-object` / `multi-tenant` / `state-machine` properties
-  set from what you actually observed — through `skills/derive-properties.md`, which owns the
+  set from what you actually observed — through `skills/context-and-prioritization/derive-properties.md`, which owns the
   closed vocabulary.
 
 ## Exit

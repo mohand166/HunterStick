@@ -29,7 +29,7 @@ An existing target brain. No traffic needed for steps 1–2.
    silently reusing them.
 3. **Re-check scope first.** A program that removed a domain makes your top-ranked cluster illegal,
    not merely stale. This is the one step that can invalidate everything downstream.
-4. **Diff, don't re-run.** → `skills/monitoring-and-diff.md`: snapshot the cheap
+4. **Diff, don't re-run.** → `skills/monitoring/monitoring-and-diff.md`: snapshot the cheap
    signals (subdomains, live hosts), diff against the last snapshot, and take **only the delta**.
    New surface becomes new `attack-surface.md` rows and new `hypotheses.md` entries.
 5. **Re-rank the affected slice only.** → `attack-surface-prioritization` over the delta plus

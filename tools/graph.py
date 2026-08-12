@@ -31,32 +31,26 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import roles                                                    # noqa: E402
-from preflight import declared_inputs, SKILL_DIRS               # noqa: E402
+import skilllib                                                 # noqa: E402
+from preflight import declared_inputs                           # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 def skills():
     """{slug: {'required': [roles], 'optional': [roles], 'path': Path}}"""
-    out, seen = {}, set()
-    for d in SKILL_DIRS:
-        if not d.is_dir():
-            continue
-        for f in sorted(d.glob("*.md")):
-            slug = re.sub(r"^\d+-", "", f.stem)
-            if f.name.startswith("_") or slug in seen:
-                continue
-            seen.add(slug)
-            decl = declared_inputs(f.read_text(encoding="utf-8-sig", errors="replace"))
-            # An "at least one of" group is NOT a set of independent requirements. Flattening it
-            # made `--for derive-properties` report the entire recon chain as prerequisite when a
-            # single artifact is enough — structurally consistent and semantically wrong.
-            out[slug] = {
-                "required": [r for r, _p, req, grp in decl if req and not grp],
-                "any_of":   [r for r, _p, _q, grp in decl if grp],
-                "optional": [r for r, _p, req, grp in decl if not req and not grp],
-                "path": f,
-            }
+    out = {}
+    for slug, f in skilllib.discover().items():
+        decl = declared_inputs(f.read_text(encoding="utf-8-sig", errors="replace"))
+        # An "at least one of" group is NOT a set of independent requirements. Flattening it
+        # made `--for derive-properties` report the entire recon chain as prerequisite when a
+        # single artifact is enough — structurally consistent and semantically wrong.
+        out[slug] = {
+            "required": [r for r, _p, req, grp in decl if req and not grp],
+            "any_of":   [r for r, _p, _q, grp in decl if grp],
+            "optional": [r for r, _p, req, grp in decl if not req and not grp],
+            "path": f,
+        }
     return out
 
 
@@ -75,8 +69,9 @@ def _resolvable(name):
     """A producer may be a skill, a workflow, or the scaffold — all are real origins."""
     if name in ("init-target", "hunter", "the hunter", ""):
         return True
-    if any((ROOT / d / f"{name}.md").exists()
-           for d in ("playbooks/workflows", "skills")):
+    if (ROOT / "playbooks" / "workflows" / f"{name}.md").exists():
+        return True
+    if name in skilllib.discover():
         return True
     # a runtime skill directory is a real origin too, until the portable layer folds it in
     return (ROOT / ".claude" / "skills" / name / "SKILL.md").exists()

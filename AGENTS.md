@@ -53,18 +53,18 @@ to `AGENTS.md` + `orchestrator.md` + the named target's small files.
 | the human says something like | load |
 |---|---|
 | "resume acme" · "where were we" · "continue hunting acme" | `tools/brief.py <t> --resume` — unfinished work, standing decisions, stale inputs, the exact read set |
-| "initialize a new target" · "start a new program" · any requested work naming a target with no directory | `skills/init-target.md` — scaffold from the supplied scope. An explicit initialization stops after scaffolding; if initialization was only a prerequisite to a named task, continue with that task after the required scope decisions are settled. |
-| "run subdomain enum" · "http probe the estate" · "prioritize the surface" · any named recon objective | `skills/_recon-method.md` **+ the one `skills/<objective>.md`** — `tools/preflight.py <t> --list` names them all |
-| "test for IDOR on /api/orders" · "check access control" · "look for logic bugs" | `skills/vuln-hunt.md` → `playbooks/vulns/_master-vuln-hunting.md` **+ one class file** |
-| "here's a request from Burp, analyse it" | `skills/analyse-request.md` |
-| "what should I run on acme" · "this host 404s everything" · "run the dead-end flow" | `skills/run-flow.md` → `tools/suggest-flows.py` → one `playbooks/flows/*.md` |
-| "monitor subdomains for acme" · "watch this target" | `skills/monitoring-and-diff.md` + `tools/monitor.py enable` |
+| "initialize a new target" · "start a new program" · any requested work naming a target with no directory | `skills/setup/init-target.md` — scaffold from the supplied scope. An explicit initialization stops after scaffolding; if initialization was only a prerequisite to a named task, continue with that task after the required scope decisions are settled. |
+| "run subdomain enum" · "http probe the estate" · "prioritize the surface" · any named recon objective | `skills/shared/_recon-method.md` **+ the one categorized body resolved by its slug** — `tools/preflight.py <t> --list` groups and names them all; `skills/README.md` is the human map |
+| "test for IDOR on /api/orders" · "check access control" · "look for logic bugs" | `skills/vulnerability-testing/vuln-hunt.md` → `playbooks/vulns/_master-vuln-hunting.md` **+ one class file** |
+| "here's a request from Burp, analyse it" | `skills/analysis/analyse-request.md` |
+| "what should I run on acme" · "this host 404s everything" · "run the dead-end flow" | `skills/orchestration/run-flow.md` → `tools/suggest-flows.py` → one `playbooks/flows/*.md` |
+| "monitor subdomains for acme" · "watch this target" | `skills/monitoring/monitoring-and-diff.md` + `tools/monitor.py enable` |
 | "import this Burp/HAR capture" · "here's an export from Burp" | `playbooks/workflows/import-traffic.md` + `tools/import-http.py` |
 | "recover lazy chunks" · "find every Webpack/Next chunk" | `playbooks/workflows/recover-js-chunks.md` + `tools/chunks.py`; parse locally, fetch only the scoped candidate frontier |
 | "test every Rails host against this CVE" · "sweep the cohort for log4j" | `playbooks/workflows/n-day-sweep.md` + `tools/kb.py cohort` → `tools/sweep.py` |
-| "re-evaluate the JS skill from my research" · "ground the SQLi playbook from these reports" | `skills/ground-a-playbook.md` — evaluate one `knowledge/<subject>/` delta, then KEEP or IMPROVE that one file |
-| "analyze this Django app" · "what does this stack change?" · a named framework/component | `skills/tech-analysis.md` → `playbooks/tech/`; record hypotheses, **do not test** |
-| a multi-step ask no single skill covers — "extract JS from the 404s, pull params, test them", "chain X into Y" | `skills/compose-task.md` — decompose into existing skills + glue, run through the harness |
+| "re-evaluate the JS skill from my research" · "ground the SQLi playbook from these reports" | `skills/maintenance/ground-a-playbook.md` — evaluate one `knowledge/<subject>/` delta, then KEEP or IMPROVE that one file |
+| "analyze this Django app" · "what does this stack change?" · a named framework/component | `skills/analysis/tech-analysis.md` → `playbooks/tech/`; record hypotheses, **do not test** |
+| a multi-step ask no single skill covers — "extract JS from the 404s, pull params, test them", "chain X into Y" | `skills/orchestration/compose-task.md` — decompose into existing skills + glue, run through the harness |
 
 **Skill availability is a property of the runtime, not the model vendor.** Any runtime that
 discovers `.claude/skills/*/SKILL.md` exposes all **32** skills — Claude Code does, and so does
@@ -83,7 +83,7 @@ Never "next is phase N+1"; the graph branches on what you just learned.
 **Flows are the one bundle, and only because the human authorized the bundle.** A flow
 (`playbooks/flows/`) is a named response to a *situation* — "this host 404s everything", "no signup
 available", "3,918 hosts". It groups several phases under **one** human decision. **Read the intent**
-(`skills/run-flow.md`): *"what should I run?"* means recommend the flow, print its steps, and stop;
+(`skills/orchestration/run-flow.md`): *"what should I run?"* means recommend the flow, print its steps, and stop;
 *"run the dead-end flow"* means they authorised it — print what it will do, then run it, without
 asking again for permission they just gave. Always print the steps first. One hard stop mid-flow —
 a **required input missing**; calibration, accounts and loud steps are carried forward or parked,
@@ -264,7 +264,7 @@ testing and gets a row so coverage stays honest.
 ## Starting a new target
 
 Say **"Initialize a new target XYZ"** (or "start a new program XYZ"). That runs
-`skills/init-target.md`: scaffolds `targets/<slug>/` from `_template/`, stores the supplied
+`skills/setup/init-target.md`: scaffolds `targets/<slug>/` from `_template/`, stores the supplied
 scope statement verbatim, derives the graph entry point from its shape, records unknowns as
 `TBD — blocking: …`, appends a row to `targets/TARGETS.md`, then **STOPS**. It sends no traffic and does not run
 any recon phase. Rules of engagement go into `scope.md` **only if the program states them** —

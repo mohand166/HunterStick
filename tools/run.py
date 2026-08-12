@@ -52,7 +52,7 @@ applied. (The checkout was there the whole time; nobody re-verified the claim.) 
 encoded judgements that belong to the hunter: which packets to send, from where, at what rate.
 
 So the responsibilities split where they belong. **The model owns command choice** — read the
-installed binary's help, pilot, verify the output shape, adapt (`skills/_recon-method.md`).
+installed binary's help, pilot, verify the output shape, adapt (`skills/shared/_recon-method.md`).
 **This owns the mechanically assertable edge**: known invocation traps, fresh output and declared
 JSON/JSONL shape, plus the evidence record. It does not choose scope, methods, rates or what to hunt.
 

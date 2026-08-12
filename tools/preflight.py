@@ -45,12 +45,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import roles      # noqa: E402
+import skilllib   # noqa: E402
 from dashboard import state_of                                  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-# skills/ is the single home of every invocable objective — including init-target, which
-# scaffolds a brain rather than running against one.
-SKILL_DIRS = (ROOT / "skills",)
+# Kept as a public compatibility constant for callers that import it. Discovery itself is
+# recursive and centralized in skilllib so nesting skills does not hide them from a runtime.
+SKILL_DIRS = (skilllib.SKILLS_ROOT,)
 
 # A bullet hedged like this describes an input that makes the run richer, not one it needs.
 OPTIONAL = re.compile(r"\b(optional\b|if |when |where available|if done)", re.I)
@@ -65,25 +66,12 @@ def die(msg, code=2):
 
 
 def skill_file(name):
-    name = str(name)
-    hits = []
-    for d in SKILL_DIRS:
-        if not d.is_dir():
-            continue
-        hits += [p for p in sorted(d.glob(f"{name}*.md")) if not p.name.startswith("_")]
-        hits += [p for p in sorted(d.glob(f"*{name}*.md")) if not p.name.startswith("_")]
-    # dedupe by stem, keeping the first (skills/ wins over playbooks/recon/)
-    seen, uniq = set(), []
-    for p in hits:
-        stem = re.sub(r"^\d+-", "", p.stem)
-        if stem not in seen:
-            seen.add(stem)
-            uniq.append(p)
-    if not uniq:
+    try:
+        return skilllib.resolve(name)
+    except KeyError:
         die(f"no skill matching '{name}'. Try: tools/preflight.py <target> --list")
-    if len(uniq) > 1:
-        die(f"'{name}' matches {len(uniq)}: {', '.join(p.stem for p in uniq)}. Be specific.")
-    return uniq[0]
+    except ValueError as error:
+        die(f"{error}. Be specific.")
 
 
 def declared_inputs(text):
@@ -218,23 +206,24 @@ def main():
 
     if args.list or not args.skill:
         print(f"\n# inputs — {tdir.name}\n")
-        seen = set()
-        for d in SKILL_DIRS:
-            for sf in sorted(d.glob("*.md")) if d.is_dir() else []:
-                stem = re.sub(r"^\d+-", "", sf.stem)
-                if sf.name.startswith("_") or stem in seen:
-                    continue
-                seen.add(stem)
-                _, miss, _, prompt = check(tdir, sf)
-                if miss:
-                    mark, why = "needs ", f"  {miss[0][0]} (from {miss[0][3]})"
-                elif prompt:
-                    # Never call a prompt-subject skill unconditionally ready in --list: it has
-                    # no context to know whether the subject was supplied. Honest third state.
-                    mark, why = "prompt", f"  needs {prompt[0][0]} in your message"
-                else:
-                    mark, why = "ready ", ""
-                print(f"  {mark:<7} {stem:<38}{why[:52]}")
+        current_category = None
+        for stem, sf in sorted(skilllib.discover().items(),
+                               key=lambda item: (skilllib.category(item[1]), item[0])):
+            category = skilllib.category(sf)
+            if category != current_category:
+                print(f"  [{category}]")
+                current_category = category
+            _, miss, _, prompt = check(tdir, sf)
+            if miss:
+                mark, why = "needs ", f"  {miss[0][0]} (from {miss[0][3]})"
+            elif prompt:
+                # Never call a prompt-subject skill unconditionally ready in --list: it has
+                # no context to know whether the subject was supplied. Honest third state.
+                mark, why = "prompt", f"  needs {prompt[0][0]} in your message"
+            else:
+                mark, why = "ready ", ""
+            print(f"    {mark:<7} {stem:<38}{why[:52]}")
+
         print("\n  needs  = a REQUIRED input is not in the brain — run the producer or supply it.\n"
               "  prompt = ready once you supply the @hunter.* subject in your message (and pass\n"
               "           --provided to confirm it). Not unconditionally ready. An optional input\n"

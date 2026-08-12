@@ -18,20 +18,20 @@ Host is live (200/403/404 consistently), and:
 ## Steps — cheapest first, stop as soon as one pays off
 
 1. **Archives and third-party memory.** Somebody indexed it when it had content.
-   → `skills/url-collection.md` (wayback, commoncrawl, urlscan, VT). **Zero traffic to
+   → `skills/surface-discovery/url-collection.md` (wayback, commoncrawl, urlscan, VT). **Zero traffic to
    the target.** Always first for exactly that reason.
 2. **JavaScript.** If any bundle loads, routes and API bases are inside it.
-   → `skills/javascript-analysis.md`
+   → `skills/surface-discovery/javascript-analysis.md`
 3. **Virtual hosts and the edge.** The IP may serve something else entirely under a different
    `Host`, and the CDN may be hiding an origin.
-   → `skills/live-host-validation.md` (vhost probing) + `dns-analysis` for the
+   → `skills/know-your-target/live-host-validation.md` (vhost probing) + `dns-analysis` for the
    CNAME chain and origin candidates.
 4. **Only now, fuzz.** With a *derived* wordlist — words from this target's own URLs, JS, DNS names
    and error text — not a generic list.
-   → `skills/content-discovery.md`. **Loud phase: selector + budget + pilot.**
+   → `skills/surface-discovery/content-discovery.md`. **Loud phase: selector + budget + pilot.**
 5. **Reassess.** Anything found feeds `attack-surface.md` with properties — through
-   `skills/derive-properties.md`, which owns the closed vocabulary — then
-   → `skills/attack-surface-prioritization.md` on the new slice only.
+   `skills/context-and-prioritization/derive-properties.md`, which owns the closed vocabulary — then
+   → `skills/context-and-prioritization/attack-surface-prioritization.md` on the new slice only.
 
 ## Aborts
 - **Step 1 or 2 pays off richly** → the host is not a dead end. **Stop the flow** and re-enter at

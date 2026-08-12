@@ -17,16 +17,16 @@
 
 1. **Collect every bundle**, including lazy chunks. Chunk names in the entry bundle reveal routes
    the shell never loads.
-   → `skills/javascript-analysis.md`
+   → `skills/surface-discovery/javascript-analysis.md`
 2. **Pull the contract out of the bundle** — API base URLs, route tables, endpoint templates,
    parameter names, feature flags, role strings, and any embedded key. Parameter names from here are
    *real*; they beat any wordlist and they are why `parameter-discovery` is often unnecessary.
 3. **Map the API.** The bundle told you the base and the shape.
-   → `skills/api-discovery.md`, and if it is GraphQL or gRPC,
+   → `skills/surface-discovery/api-discovery.md`, and if it is GraphQL or gRPC,
    `playbooks/workflows/investigate-graphql.md` / `investigate-grpc.md` to recover the schema.
 4. **Drive the app and watch the network.** Click through every feature; the requests the app makes
    are the ground truth the bundle only hinted at.
-   → `skills/application-mapping.md` (needs accounts for anything behind login).
+   → `skills/application-understanding/application-mapping.md` (needs accounts for anything behind login).
 5. **Record properties, then rank.** Each discovered endpoint gets its observed properties in
    `attack-surface.md` (rank empty; `attack-surface-prioritization` only on request) on the new slice.
 

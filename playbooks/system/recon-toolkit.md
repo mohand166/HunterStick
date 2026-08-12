@@ -5,7 +5,7 @@
 > mapping lives next to the method it belongs to.
 >
 > **What a skill deliberately does NOT give you is the invocation.** No flag lists, no command
-> templates: `skills/_recon-method.md` puts tool correctness on you, every run, against the
+> templates: `skills/shared/_recon-method.md` puts tool correctness on you, every run, against the
 > binary actually installed. That is not an omission this file fills. A skill once instructed two
 > `httpx` flags that do not exist in the installed build, and every downstream parse would have
 > reported a confident zero across 62,646 targets. **A flag list is `--help` with a shelf life.**
