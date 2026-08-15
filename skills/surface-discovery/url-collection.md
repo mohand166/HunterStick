@@ -25,7 +25,8 @@ minus crawled — and mine the raw corpus for values before any normalisation de
 
 - `@roots` (optional, from `organization-and-roots`) — apexes for recovering historical names that
   no longer appear in the live set. Without them, collect only the selected host or current hosts.
-- `@appmap` (optional, from `application-mapping`) — the UI-reachable route set. Without it the
+- `@app.current` (optional, from `application-mapping`) — the UI-reachable route set for the exact
+  host selected by `@hunter.host`. Without it the
   crawled side of the zombie diff is whatever your crawler reached, which is weaker but usable.
 - `@js` (optional, from `javascript-analysis`) — declared client routes. Strengthens the crawled
   side and catches routes a crawler never clicks its way into.

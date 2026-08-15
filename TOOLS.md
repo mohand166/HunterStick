@@ -26,12 +26,14 @@ invocation and exit code to the target's tool log where a target is available.
 | what you want | what you say | primary tool |
 |---|---|---|
 | understand current state | “Where are we on acme?” | `brief.py` |
+| load one application's memory | “Resume acme on app.acme.com.” | `app-context.py` + `brief.py --host` |
 | initialize safely | “Initialize acme with this scope…” | `init-target.py` |
 | choose a bounded next move | “What should I run, and why?” | `suggest-flows.py` |
 | check a skill has its inputs | invoked automatically before recon | `preflight.py` |
 | execute one HTTP recon command | “Run HTTP probing on these hosts.” | `vps-run.py` → VPS `run.py` |
 | execute one non-HTTP command | “Resolve these names.” | VPS `run.py` |
 | calculate untested work | “What have we not tested?” | `coverage.py` |
+| inspect scope-wide and per-host/IP history | “Show progress for acme.” | `progress.py` |
 | record and connect facts | “What changed?” / “Show chains.” | `kb.py` |
 | import browsing traffic | “Import this Burp/HAR export.” | `import-http.py` |
 | recover lazy JavaScript | “Find every authorized lazy chunk in these bundles.” | `chunks.py` |
@@ -40,6 +42,9 @@ invocation and exit code to the target's tool log where a target is available.
 | watch for new assets | “Monitor subdomains every 12 hours.” | `monitor.py` |
 | pilot an n-day check | “Check this affected cohort.” | `sweep.py` |
 | audit failures | “What failed?” | `runlog.py` |
+| push event notifications | “Ping my channel when something happens.” | `notify.py` |
+| watch advisories vs the stack | “Any new CVEs for what they run?” | `techwatch.py` |
+| plan the saved runbook | “Run my evening pass.” | `runbook.py` |
 
 ---
 
@@ -162,8 +167,11 @@ You may invoke any tool to verify the model's work. Safe inspection commands inc
 
 ```bash
 python3 tools/brief.py acme --resume
+python3 tools/brief.py acme --resume --host https://app.acme.com
+python3 tools/app-context.py resolve targets/acme https://app.acme.com
 python3 tools/suggest-flows.py targets/acme --why
 python3 tools/coverage.py targets/acme
+python3 tools/progress.py targets/acme
 python3 tools/runlog.py targets/acme --failures
 python3 tools/dashboard.py targets/acme
 python3 tools/self-check.py

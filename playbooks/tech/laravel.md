@@ -86,3 +86,21 @@ A `419`, framework cookie, authenticated dashboard or blocked dotfile is not a f
 request to one remembered debug path does not prove the package absent. Stop an advisory path when
 package identity/version/mode is unresolved, and stop any operational check before it executes a
 solution, changes queue/log state or accesses unrelated user data.
+
+## 10 · Checks — the `component-hunt` catalog
+
+> Executed by `skills/vulnerability-testing/component-hunt.md` on a hunter-named host whose
+> fingerprint matches this profile. One request per check, read-only. Ignition/exploitation
+> chains and known CVEs stay with `n-day-sweep` once the version is pinned.
+
+| check | precondition | probe | a hit is | safety | on hit → class | fix_locus |
+|---|---|---|---|---|---|---|
+| env file exposure | Laravel fingerprint (§2) | `GET /.env` | `KEY=VALUE` ini-style body — not the framework HTML error page | **presence-only** — store the response with values masked; key names + count is the proof | `origin-exposure` (`cloud-misconfiguration` when cloud creds) | web-server dotfile serving / docroot |
+| application log | Laravel fingerprint | `GET /storage/logs/laravel.log` | log-shaped text (timestamps, levels, stack traces) | read | `origin-exposure` | storage path exposure |
+| dev tooling | Telescope in stack (composer lock, bundle refs) | `GET /telescope` | Telescope UI markup/JSON (not auth redirect to login) | read | unauthenticated debug console → `function-level-authorization` | Telescope gate config / route middleware |
+| Ignition present | Laravel + debug mode suspected | `GET /_ignition/health-check` | the Ignition health JSON shape | **presence-only** | version-gated chain → `n-day-sweep` once version known | debug mode (`APP_DEBUG`) |
+| session cookie shape | Laravel fingerprint | read the `Set-Cookie: laravel_session` attributes | missing `Secure`/`HttpOnly`/`SameSite` | passive | `session-management` hypothesis | cookie config |
+
+APP_KEY-derived deserialization chains are version- and config-gated: record the key's
+exposure as `origin-exposure` evidence and route exploitation to `vuln-hunt` with the
+`deserialization` class file.

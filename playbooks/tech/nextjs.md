@@ -91,3 +91,17 @@ Framework plumbing—`__NEXT_DATA__`, RSC traffic, action identifiers and public
 finding. A Vercel edge may be provider-owned. A method-specific 404/405 can be route evidence but
 not impact. Stop an advisory path when product/package identity, affected range, deployment mode or
 reachable feature cannot be established.
+
+## 10 · Checks — the `component-hunt` catalog
+
+> Executed by `skills/vulnerability-testing/component-hunt.md` on a hunter-named host whose
+> fingerprint matches this profile. Next.js's exploitable history is mostly **version-gated**
+> (middleware bypass, cache poisoning advisories) — those belong to `n-day-sweep` after
+> `component-inventory` pins the version. The behavioral rows below do not rot with releases.
+
+| check | precondition | probe | a hit is | safety | on hit → class | fix_locus |
+|---|---|---|---|---|---|---|
+| build manifest routes | Next.js fingerprint (§2) | `GET /_next/static/<buildId>/_buildManifest.js` (buildId from any chunk URL or `__NEXT_DATA__`) | JS naming route ids including pages nothing links to | read | unreferenced route delta → `@endpoints`/authz worklist — same handoff as the bundle route delta | — (recon) |
+| source maps | Next.js fingerprint | append `.map` to evidenced chunk URLs | a real sourcemap JSON (`version`, `sources`) | read | feeds `javascript-analysis`; **not a report** — harvest the route table, never report the exposure | build config (`productionBrowserSourceMaps`) |
+| server data leakage | `__NEXT_DATA__` present | read its `props`/env | secret-shaped values (internal hostnames, keys, tokens) — not `NEXT_PUBLIC_*`, which is public by design | **presence-only** — record the key path, never the value | `origin-exposure` | server-only data reaching page props |
+| middleware auth posture | middleware claimed in stack | compare a protected route's response with and without the middleware cookies (two requests) | protected behavior intact — a *non-hit* is coverage | read | on bypass-shaped behavior → `authentication-bypass` via `vuln-hunt` (version-gated CVEs → sweep) | middleware matcher/config |

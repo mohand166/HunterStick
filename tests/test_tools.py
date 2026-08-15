@@ -34,7 +34,7 @@ class SkillDiscoveryTests(unittest.TestCase):
         runtime = {path.parent.name for path in
                    (ROOT / ".claude" / "skills").glob("*/SKILL.md")}
         self.assertEqual(runtime, set(discovered))
-        self.assertEqual(32, len(discovered))
+        self.assertEqual(35, len(discovered))
 
     def test_duplicate_slug_fails_loudly(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -47,12 +47,263 @@ class SkillDiscoveryTests(unittest.TestCase):
                 self.skilllib.discover(root)
 
 
+class ProgressViewTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.progress = load_tool("progress")
+
+    def _brain(self, root):
+        target = Path(root) / "acme"
+        (target / "logs" / "exec").mkdir(parents=True)
+        (target / "index.md").write_text("# acme\n")
+        (target / "runs.tsv").write_text(
+            "\t".join(self.progress.RUN_COLUMNS) + "\n"
+            "R-001\t2026-08-13\tcontent-discovery\ta.acme.com\tffuf\t100 requests\t"
+            "complete-for-this-run\t3 paths\traw/content/a.json\tnone\t\tabc123\n"
+            "R-002\t2026-08-13\tjavascript-analysis\tselected live hosts\tjsluice\t"
+            "\tpartial\t2 bundles\traw/js/\t1 host skipped\tresume host list\tabc123\n")
+        (target / "tested.md").write_text(
+            "| date | run_id | entrypoint | variant | class | principal | method | result | coverage | fix_locus | artifact_ptr |\n"
+            "|---|---|---|---|---|---|---|---|---|---|---|\n"
+            "| 2026-08-13 | R-003 | https://b.acme.com/api/orders | id swap | idor-bola | user-b | replayed user-a object | not-vuln | tested | orders | raw/R-003/evidence.md |\n")
+        return target
+
+    def test_render_groups_exact_work_under_each_host(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._brain(directory)
+            (target / "logs" / "exec" / "ffuf.json").write_text(json.dumps({
+                "ts": "20260813T120000", "started": "2026-08-13T12:00:00",
+                "skill": "content-discovery", "run_id": "R-001", "tool": "ffuf",
+                "argv": ["ffuf", "-u", "https://a.acme.com/FUZZ", "-w",
+                         "recon/wordlists/a-derived.txt", "-fs", "2048"],
+                "inputs": [{"path": "recon/wordlists/a-derived.txt",
+                            "sha256_16": "feedfacefeedface"}],
+                "exit": 0, "artifact": {"path": "raw/content/a.json"}
+            }))
+            rendered = self.progress.render(target)
+        self.assertIn("### `a.acme.com`", rendered)
+        self.assertIn("### `b.acme.com`", rendered)
+        self.assertIn("ffuf -u https://a.acme.com/FUZZ", rendered)
+        self.assertIn("recon/wordlists/a-derived.txt (feedfacefeedface)", rendered)
+        self.assertIn("idor-bola / id swap", rendered)
+
+    def test_file_based_command_is_not_guessed_onto_hosts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._brain(directory)
+            (target / "logs" / "exec" / "jsluice.json").write_text(json.dumps({
+                "ts": "20260813T130000", "skill": "javascript-analysis", "run_id": "R-002",
+                "tool": "jsluice", "argv": ["jsluice", "urls", "raw/js/bundles.txt"],
+                "inputs": [{"path": "raw/js/bundles.txt", "sha256_16": "abc"}], "exit": 0
+            }))
+            rendered = self.progress.render(target)
+        unresolved = rendered.split("## Multi-asset or unresolved commands", 1)[1]
+        self.assertIn("selected live hosts", unresolved)
+        self.assertIn("jsluice urls raw/js/bundles.txt", unresolved)
+
+    def test_header_url_is_not_mistaken_for_a_second_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._brain(directory)
+            (target / "logs" / "exec" / "ffuf.json").write_text(json.dumps({
+                "ts": "20260813T130000", "skill": "content-discovery", "run_id": "R-001",
+                "tool": "ffuf", "argv": ["ffuf", "-u", "https://a.acme.com/FUZZ",
+                                          "-H", "Origin: https://callback.example.test"],
+                "inputs": [], "exit": 0
+            }))
+            rendered = self.progress.render(target)
+        per_host = rendered.split("## Per-host / IP progress", 1)[1].split(
+            "## Multi-asset or unresolved commands", 1)[0]
+        self.assertIn("### `a.acme.com`", per_host)
+        self.assertNotIn("### `callback.example.test`", per_host)
+
+    def test_apex_phrase_is_scope_wide_not_single_host_progress(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._brain(directory)
+            text = (target / "runs.tsv").read_text().replace(
+                "content-discovery\ta.acme.com", "subdomain-enumeration\tacme.com apex (wildcard)")
+            (target / "runs.tsv").write_text(text)
+            (target / "logs" / "exec" / "subfinder.json").write_text(json.dumps({
+                "ts": "20260813T120000", "skill": "subdomain-enumeration", "run_id": "R-001",
+                "tool": "subfinder", "argv": ["subfinder", "-d", "acme.com", "-all"],
+                "inputs": [], "exit": 0
+            }))
+            rendered = self.progress.render(target)
+        per_host = rendered.split("## Per-host / IP progress", 1)[1].split(
+            "## Multi-asset or unresolved commands", 1)[0]
+        unresolved = rendered.split("## Multi-asset or unresolved commands", 1)[1]
+        self.assertNotIn("### `acme.com`", per_host)
+        self.assertIn("acme.com apex (wildcard)", unresolved)
+
+    def test_annotated_host_and_port_is_still_exact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._brain(directory)
+            text = (target / "runs.tsv").read_text().replace(
+                "a.acme.com", "a.acme.com:8443 (single host, unauthenticated)")
+            (target / "runs.tsv").write_text(text)
+            rendered = self.progress.render(target)
+        per_host = rendered.split("## Per-host / IP progress", 1)[1].split(
+            "## Multi-asset or unresolved commands", 1)[0]
+        self.assertIn("### `a.acme.com`", per_host)
+
+    def test_bracketed_ipv6_selector_is_exact(self):
+        self.assertEqual(
+            "2001:db8::1",
+            self.progress.exact_selector_asset("[2001:db8::1]:8443 (single host)"))
+
+    def test_bad_execution_record_fails_loudly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._brain(directory)
+            (target / "logs" / "exec" / "bad.json").write_text("not json")
+            with self.assertRaises(self.progress.ProgressError):
+                self.progress.render(target)
+
+
 def load_tool(name):
     path = ROOT / "tools" / f"{name}.py"
     spec = importlib.util.spec_from_file_location(f"test_{name}", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+class ApplicationContextTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app_cli = load_tool("app-context")
+        cls.app = cls.app_cli.applib
+        cls.preflight = load_tool("preflight")
+        cls.brief = load_tool("brief")
+
+    def _target(self, root):
+        target = Path(root) / "acme"
+        template = target / "applications" / "_host-template"
+        template.mkdir(parents=True)
+        (target / "index.md").write_text("# acme\n", encoding="utf-8")
+        (template / "map.md").write_text(
+            "# <host> — Application Map\n\n## What the app does\n- <business function>\n",
+            encoding="utf-8")
+        (template / "endpoints.md").write_text(
+            "# <host> — Endpoint Inventory\n\n| url | method |\n|---|---|\n",
+            encoding="utf-8")
+        (template / "notes.md").write_text(
+            "# <host> — Working Notes\n\n- \n", encoding="utf-8")
+        return target
+
+    def _skill(self, root):
+        path = Path(root) / "one-app.md"
+        path.write_text(
+            "# one app\n\n## Inputs\n\n"
+            "- `@hunter.host` — exact app.\n"
+            "- `@app.current` (optional) — prior application context.\n\n"
+            "## Outputs\n\n- result\n",
+            encoding="utf-8")
+        return path
+
+    def test_url_host_and_port_resolve_existing_brain(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._target(directory)
+            created = self.app.ensure(target, "https://App.Acme.com:8443/path?q=1")
+            (created.path / "notes.md").write_text(
+                "# app.acme.com:8443 — Working Notes\n\n- FACT: mapped\n",
+                encoding="utf-8")
+            resolved = self.app.resolve(target, "app.acme.com:8443")
+            populated = resolved.populated
+        self.assertEqual("found", resolved.status)
+        self.assertEqual("app.acme.com-8443", resolved.path.name)
+        self.assertTrue(populated)
+
+    def test_template_and_sibling_never_satisfy_another_host(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._target(directory)
+            app = self.app.ensure(target, "a.acme.com")
+            (app.path / "notes.md").write_text("- FACT: app A\n", encoding="utf-8")
+            missing = self.app.resolve(target, "b.acme.com")
+        self.assertEqual("missing", missing.status)
+        self.assertIsNone(missing.path)
+
+    def test_host_without_port_fails_loudly_when_two_port_brains_exist(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._target(directory)
+            self.app.ensure(target, "app.acme.com:443")
+            self.app.ensure(target, "app.acme.com:8443")
+            resolved = self.app.resolve(target, "app.acme.com")
+        self.assertEqual("ambiguous", resolved.status)
+        self.assertEqual(2, len(resolved.candidates))
+
+    def test_ipv6_gets_a_stable_safe_directory_but_preserves_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._target(directory)
+            created = self.app.ensure(target, "https://[2001:db8::1]:8443/a")
+            resolved = self.app.resolve(target, "[2001:db8::1]:8443")
+            map_text = (created.path / "map.md").read_text()
+        self.assertRegex(created.path.name, r"^ipv6-[0-9a-f]{12}-8443$")
+        self.assertEqual(created.path, resolved.path)
+        self.assertIn("[2001:db8::1]:8443", map_text)
+
+    def test_preflight_uses_only_the_selected_populated_app(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._target(directory)
+            skill = self._skill(directory)
+            app_a = self.app.ensure(target, "a.acme.com")
+            (app_a.path / "notes.md").write_text("- FACT: app A\n", encoding="utf-8")
+
+            present_a, required_a, optional_a, prompt_a = self.preflight.check(
+                target, skill, host="a.acme.com")
+            present_b, required_b, optional_b, prompt_b = self.preflight.check(
+                target, skill, host="b.acme.com")
+
+        self.assertIn("@app.current", {row[0] for row in present_a})
+        self.assertIn("applications/a.acme.com/", {row[1] for row in present_a})
+        self.assertEqual([], required_a + prompt_a)
+        self.assertNotIn("@app.current", {row[0] for row in present_b})
+        self.assertIn("@app.current", {row[0] for row in optional_b})
+        self.assertEqual([], required_b + prompt_b)
+
+    def test_copied_but_unfilled_scaffold_is_not_prior_context(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._target(directory)
+            skill = self._skill(directory)
+            self.app.ensure(target, "app.acme.com")
+            present, _required, optional, _prompt = self.preflight.check(
+                target, skill, host="app.acme.com")
+        self.assertNotIn("@app.current", {row[0] for row in present})
+        self.assertEqual("scaffold", next(row[2] for row in optional
+                                          if row[0] == "@app.current"))
+
+    def test_brief_read_set_contains_only_the_selected_application(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._target(directory)
+            app_a = self.app.ensure(target, "a.acme.com")
+            self.app.ensure(target, "b.acme.com")
+            lines, files = self.brief.application_context(target, "a.acme.com")
+        self.assertIn("applications/a.acme.com/", lines[0])
+        self.assertEqual({
+            "applications/a.acme.com/map.md",
+            "applications/a.acme.com/endpoints.md",
+            "applications/a.acme.com/notes.md",
+        }, set(files))
+        self.assertFalse(any("b.acme.com" in path for path in files))
+
+    def test_raw_path_without_a_url_scheme_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "full URL"):
+            self.app.parse_subject("app.acme.com/private")
+
+    def test_failed_creation_leaves_neither_brain_nor_temporary_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = self._target(directory)
+            original_copytree = self.app.shutil.copytree
+
+            def interrupted_copy(source, destination):
+                original_copytree(source, destination)
+                raise OSError("simulated interruption")
+
+            self.app.shutil.copytree = interrupted_copy
+            try:
+                with self.assertRaisesRegex(OSError, "simulated interruption"):
+                    self.app.ensure(target, "app.acme.com")
+            finally:
+                self.app.shutil.copytree = original_copytree
+            children = {path.name for path in (target / "applications").iterdir()}
+        self.assertEqual({"_host-template"}, children)
 
 
 class AccountReadinessTests(unittest.TestCase):
@@ -553,7 +804,8 @@ class GeneratedShellTests(unittest.TestCase):
     def _body():
         block = mon.ACTIVE_BLOCK.replace("__HEADER_FLAGS__", "").replace("__MAXJS__", "800")
         return mon.REMOTE_SCRIPT.format(marker="bb-monitor", target="acme", min_ratio=50,
-                                        keep_days=30, active=1, rate=45, active_block=block)
+                                        keep_days=30, active=1, rate=45, active_block=block,
+                                        codedir="~/hunterstick")
 
     def test_monitor_script_has_no_literal_backslash_n(self):
         """A literal \\n inside generated bash printed 'text:n echo > more text'."""
@@ -1345,7 +1597,8 @@ class InitTargetTests(unittest.TestCase):
                                 f"{scope} suggests '{slug}', which is not a skill")
 
     def test_every_schema_file_is_required_before_the_rename(self):
-        for f in ("scope.md", "index.md", "tested.md", "runs.tsv", "observations.tsv"):
+        for f in ("scope.md", "index.md", "progress.md", "tested.md", "runs.tsv",
+                  "observations.tsv"):
             self.assertIn(f, init.REQUIRED)
 
     def test_slugify_refuses_an_empty_result(self):
@@ -2433,7 +2686,8 @@ class MonitorJobTests(unittest.TestCase):
         block = (m.ACTIVE_BLOCK.replace("__HEADER_FLAGS__", "-H 'X-Bug-Bounty: t'")
                               .replace("__MAXJS__", str(max_js)))
         return m.REMOTE_SCRIPT.format(marker="bb-monitor", target="acme", min_ratio=50,
-                                      keep_days=30, active=active, rate=rate, active_block=block)
+                                      keep_days=30, active=active, rate=rate, active_block=block,
+                                      codedir="~/hunterstick")
 
     def test_generated_job_is_valid_bash(self):
         import subprocess, tempfile
@@ -2830,7 +3084,8 @@ class MonitorBehaviorTests(unittest.TestCase):
                 f.chmod(0o755)
             block = (m.ACTIVE_BLOCK.replace("__HEADER_FLAGS__", "-H 'X: y'").replace("__MAXJS__", "50"))
             job = m.REMOTE_SCRIPT.format(marker="bb", target="acme", min_ratio=50,
-                                        keep_days=30, active=1, rate=30, active_block=block)
+                                        keep_days=30, active=1, rate=30, active_block=block,
+                                        codedir="~/hunterstick")
             script = Path(bindir) / "monitor.sh"
             script.write_text(job)
             env = {"HOME": home, "PATH": f"{bindir}:{os.environ.get('PATH','')}"}
@@ -3460,11 +3715,13 @@ class SkillContractTests(unittest.TestCase):
 
     SECTIONS = ["## Objective", "## Inputs", "## Outputs", "## Exit criteria", "## Next"]
     # Not recon objectives, and deliberately shaped differently: vuln-hunt dispatches over the
-    # class library, run-flow bundles several skills under one human decision, analyse-request
-    # consumes a pasted request, tech-analysis reasons about a stack, ground-a-playbook is
-    # build-time. Holding them to the recon contract would force five jobs into one template.
-    NOT_RECON = {"vuln-hunt", "run-flow", "analyse-request", "tech-analysis",
-                 "ground-a-playbook", "init-target"}
+    # class library, component-hunt executes a tech catalog (vuln-hunt's shape over checks),
+    # run-flow bundles several skills under one human decision and runbook executes the hunter's
+    # saved bundle of the same kind, analyse-request consumes a pasted request, tech-analysis
+    # reasons about a stack, ground-a-playbook is build-time. Holding them to the recon contract
+    # would force seven jobs into one template.
+    NOT_RECON = {"vuln-hunt", "component-hunt", "run-flow", "runbook", "analyse-request",
+                 "tech-analysis", "ground-a-playbook", "init-target"}
 
     @classmethod
     def setUpClass(cls):
@@ -3788,7 +4045,8 @@ class DocumentedCountTests(unittest.TestCase):
     same failure mode that let five safety rules go inert.
     """
 
-    WORDS = {"thirty": 30, "thirty-one": 31, "thirty-two": 32, "twenty-five": 25,
+    WORDS = {"thirty": 30, "thirty-one": 31, "thirty-two": 32, "thirty-three": 33,
+             "thirty-four": 34, "thirty-five": 35, "twenty-five": 25,
              "twenty-six": 26, "twenty-seven": 27, "twenty-eight": 28, "twenty-nine": 29,
              "forty-five": 45, "forty-eight": 48}
 
@@ -4621,3 +4879,225 @@ class ControlContractTests(unittest.TestCase):
                 if tok in {"concurrency", "ambiguous-framing", "parses-structured"}:
                     bad.append(f"{p.stem}: {tok} was REMOVED from the vocabulary")
         self.assertEqual([], bad, "\n".join(bad))
+
+
+class NotifyTests(unittest.TestCase):
+    """The webhook sender: template rendering, spool behavior, and the rule that a broken
+    webhook must never break a finished run."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.notify = load_tool("notify")
+
+    def test_render_leaves_unknown_keys_literal(self):
+        out = self.notify._render("{event} at {unknown}", {"event": "run-failed"})
+        self.assertEqual(out, "run-failed at {unknown}")
+
+    def test_default_payload_carries_text_and_content(self):
+        payload = self.notify.build_payload(
+            {"url": "https://example.invalid/hook"},
+            {"event": "monitor-delta", "target": "acme", "title": "t", "body": "b", "ts": "x"})
+        self.assertEqual(payload["text"], "t\nb")
+        self.assertEqual(payload["content"], "t\nb")
+
+    def test_channel_template_overrides_body(self):
+        payload = self.notify.build_payload(
+            {"url": "https://example.invalid/hook", "template": {"content": "[{target}] {title}"}},
+            {"event": "e", "target": "acme", "title": "T", "body": "", "ts": "x"})
+        self.assertEqual(payload, {"content": "[acme] T"})
+
+    def test_channels_file_shape_is_enforced(self):
+        with tempfile.TemporaryDirectory() as d:
+            bad = Path(d) / "c.json"
+            bad.write_text('{"channels": [{"name": "no url here"}]}')
+            channels, _strict, problem = self.notify.load_channels(str(bad))
+            self.assertIsNone(channels)
+            self.assertIn("url", problem)
+
+    def test_dead_channel_spools_and_never_raises(self):
+        spool = ROOT / ".notify-spool.jsonl"
+        had = spool.exists()
+        backup = spool.read_text() if had else None
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                ch = Path(d) / "c.json"
+                ch.write_text(json.dumps(
+                    {"channels": [{"url": "http://127.0.0.1:1/nothing"}]}))
+                sent, spooled, note = self.notify.send(
+                    "run-failed", "unit test", channels_file=str(ch))
+                self.assertEqual((sent, spooled), (0, 1))
+                self.assertIn("spooled", note)
+                self.assertTrue(spool.exists() and "unit test" in spool.read_text())
+        finally:
+            if had:
+                spool.write_text(backup)
+            elif spool.exists():
+                spool.unlink()
+
+    def test_strict_redacts_target_in_channels_file(self):
+        # a channels file with strict:true replaces the target name in the rendered template
+        with tempfile.TemporaryDirectory() as d:
+            ch = Path(d) / "c.json"
+            ch.write_text(json.dumps({"channels": [{
+                "url": "https://example.invalid/h",
+                "template": {"content": "{target}: {title}"}}], "strict": True}))
+            channels, strict, problem = self.notify.load_channels(str(ch))
+            self.assertIsNotNone(channels)
+            self.assertTrue(strict)
+            fields = {"event": "e", "target": "acme", "title": "T", "body": "", "ts": "x"}
+            fields["target"] = "(redacted)" if strict else fields["target"]
+            payload = self.notify.build_payload(channels[0], fields)
+            self.assertEqual(payload["content"], "(redacted): T")
+
+
+class TechwatchTests(unittest.TestCase):
+    """Advisory watching: inventory parsing, ecosystem mapping honesty, and the NEW delta."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tw = load_tool("techwatch")
+
+    @staticmethod
+    def _target(rows):
+        d = tempfile.TemporaryDirectory()
+        t = Path(d.name) / "tw"
+        (t / "recon").mkdir(parents=True)
+        (t / "logs").mkdir(parents=True)
+        t.joinpath("index.md").write_text("# x\n")
+        cols = "| host | component | version | precision | reachable | evidence | confidence | source |"
+        t.joinpath("recon/components.md").write_text(
+            "# t\n\n" + cols + "\n|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n")
+        return d, t
+
+    def test_parse_splits_versioned_unversioned_and_placeholders(self):
+        d, t = self._target([
+            "| a.io | lodash | 4.17.20 | exact | yes | x | observed | t |",
+            "| a.io | Spring Boot | | unknown | unknown | - | inferred | t |",
+        ])
+        with d:
+            q, u = self.tw.load_inventory(t)
+            self.assertEqual(q, [("a.io", "lodash", "4.17.20", "exact")])
+            self.assertEqual(len(u), 1)
+            self.assertIn("Spring Boot", u[0])
+
+    def test_mapping_row_suffix_and_alias_and_unmatched(self):
+        extra = {}
+        eco, pkg = self.tw.resolve_mapping("lodash@npm:lodash.ts", extra)
+        self.assertEqual((eco, pkg), ("npm", "lodash.ts"))
+        eco, pkg = self.tw.resolve_mapping("jQuery", extra)
+        self.assertEqual((eco, pkg), ("npm", "jquery"))
+        eco, reason = self.tw.resolve_mapping("Apache", extra)
+        self.assertIsNone(eco)
+        self.assertIn("no ecosystem mapping", reason)
+
+    def test_collect_flags_kev_and_keeps_unmatched(self):
+        def fake_batch(pairs, api=None, timeout=None):
+            return {p: [{"id": "GHSA-x", "aliases": ["CVE-2024-1"], "summary": "s"}]
+                    for p in pairs}
+        orig_batch, orig_kev = self.tw.osv_batch, self.tw.kev_cves
+        self.tw.osv_batch, self.tw.kev_cves = fake_batch, lambda url=None, timeout=None: {"CVE-2024-1"}
+        try:
+            matches, unmatched, kev_down = self.tw.collect(
+                [("a.io", "lodash", "4.17.20", "exact"), ("a.io", "Apache", "2.4", "bounded")],
+                {}, None, None)
+        finally:
+            self.tw.osv_batch, self.tw.kev_cves = orig_batch, orig_kev
+        self.assertEqual(len(matches), 1)
+        self.assertTrue(matches[0]["kev"])
+        self.assertEqual(unmatched, [("Apache", "no ecosystem mapping — extend ALIASES or pass --map")])
+        self.assertFalse(kev_down)
+
+    def test_seen_file_makes_second_run_report_zero_new(self):
+        d, t = self._target(["| a.io | lodash | 4.17.20 | exact | yes | x | observed | t |"])
+        with d:
+            self.tw.save_seen(t, [])
+            self.tw.save_seen(t, ["GHSA-1", "GHSA-2"])
+            self.assertEqual(self.tw.load_seen(t), {"GHSA-1", "GHSA-2"})
+
+
+class RunbookTests(unittest.TestCase):
+    """The standing-order planner: validation failures and the live plan markers."""
+
+    @classmethod
+    def setUpClass(cls):
+        self = cls
+        cls.rb = load_tool("runbook")
+
+    @staticmethod
+    def _target(rows):
+        d = tempfile.TemporaryDirectory()
+        t = Path(d.name) / "rb"
+        t.mkdir(parents=True)
+        t.joinpath("index.md").write_text("# x\n")
+        t.joinpath("runbook.md").write_text(
+            "# rb\n\n| # | when | step | selector | note |\n|---|---|---|---|---|\n"
+            + "\n".join(rows) + "\n")
+        return d, t
+
+    def test_unknown_step_and_bad_when_fail_loud(self):
+        d, t = self._target([
+            "| 1 | always | not-a-skill | — | — |",
+            "| 2 | sometimes | brief | — | — |",
+        ])
+        with d:
+            steps = self.rb.parse_steps(t)
+            failures = self.rb.validate(steps)
+            self.assertTrue(any("not-a-skill" in f for f in failures))
+            self.assertTrue(any("when" in f for f in failures))
+
+    def test_tool_steps_and_flows_resolve(self):
+        d, t = self._target([
+            "| 1 | always | brief | — | — |",
+            "| 2 | always | first-look | — | a flow |",
+            "| 3 | always | closing-brief | — | — |",
+        ])
+        with d:
+            self.assertEqual(self.rb.validate(self.rb.parse_steps(t)), [])
+
+    def test_missing_runbook_dies(self):
+        d = tempfile.TemporaryDirectory()
+        t = Path(d.name) / "nope"
+        t.mkdir()
+        with d:
+            with self.assertRaises(SystemExit):
+                self.rb.parse_steps(t)
+
+
+class MonitorNotifyWiringTests(unittest.TestCase):
+    """The generated cron job must call notify_event at its failure points and honor codedir."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mon = load_tool("monitor")
+
+    def _body(self, codedir="~/hunterstick"):
+        return self.mon.REMOTE_SCRIPT.format(
+            marker="bb-monitor", target="acme", min_ratio=50, keep_days=30,
+            active=1, rate=10, active_block=("# x" if codedir else "# x"), codedir=codedir)
+
+    def test_notify_event_uses_codedir_and_target(self):
+        body = self._body("~/hs")
+        self.assertIn('notify_event() {', body)
+        self.assertIn('~/hs/notify.json', body)
+        self.assertIn('send acme', body)
+
+    def test_failure_paths_call_notify(self):
+        body = self._body()
+        self.assertIn('notify_event run-failed "monitor run failed"', body)
+        self.assertIn('notify_event monitor-quarantined "monitor run quarantined"', body)
+        self.assertIn('notify_event monitor-delta "monitor delta pending review"', body)
+
+
+class MethodologyCoverageTests(unittest.TestCase):
+    """METHODOLOGY.md is the hunter's map of the library: "I want to do X — which skill?".
+
+    A skill missing from it is a capability the hunter cannot discover — the human-side twin of
+    the class-signals catalogue gap the model has. The file is organized by want, not by slug,
+    so this checks presence, not placement: every skill in skills/ must be named there.
+    """
+
+    def test_every_skill_appears_in_the_methodology(self):
+        text = (ROOT / "METHODOLOGY.md").read_text(encoding="utf-8")
+        missing = sorted(p.stem for p in skill_files() if p.stem not in text)
+        self.assertEqual([], missing,
+                         f"skills the hunter cannot discover from METHODOLOGY.md: {missing}")

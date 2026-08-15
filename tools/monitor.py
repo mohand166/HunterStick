@@ -80,17 +80,28 @@ RUN_FAILED=0   # any active dimension that failed or was quarantined flips this;
 mkdir -p "$SNAP" "$LOGD"
 log() {{ printf '%s  %s\n' "$(date -u +%FT%TZ)" "$*" >> "$LOG"; }}
 
+# Fire-and-forget notification. Requires ~/hunterstick/notify.json (pushed by `enable` when
+# notify.channels is configured locally); without it this is a no-op. Never blocks the run.
+notify_event() {{
+  [ -s "{codedir}/notify.json" ] || return 0
+  python3 "{codedir}/tools/notify.py" send {target} \
+    --channels-file "{codedir}/notify.json" \
+    --event "$1" --title "$2" --body "$3" >/dev/null 2>&1 || true
+}}
+
 exec 9>"$LOCK" || exit 1
 if ! flock -n 9; then log "SKIP   previous run still in progress"; exit 0; fi
 
 if [ ! -s "$APEXES" ]; then
   log "FAIL   no apex list at $APEXES — refusing to enumerate with no scope shape"
+  notify_event run-failed "monitor run failed" "no apex list at $APEXES — refusing to enumerate"
   exit 2
 fi
 
 STAMP=$(date -u +%FT%H%M%SZ)
 TMP=$(mktemp); TMPF=$(mktemp)
 trap 'rm -f "$TMP" "$TMPF" /tmp/bbm.$$.*' EXIT
+PEND0=0; [ -f "$PENDING" ] && PEND0=$(wc -c < "$PENDING" | tr -d ' ')
 
 # ---- enumerate (passive sources) -------------------------------------------
 while IFS= read -r apex; do
@@ -101,6 +112,7 @@ done < "$APEXES" | sort -u > "$TMP"
 N=$(wc -l < "$TMP" | tr -d ' ')
 if [ "$N" -eq 0 ]; then
   log "FAIL   subfinder returned 0 names (keys expired? network down?) — nothing written"
+  notify_event run-failed "monitor run failed" "subfinder returned 0 names — nothing written"
   exit 2
 fi
 
@@ -143,6 +155,8 @@ if [ -n "$PREV" ]; then
     cp "$TMPF" "$CUR.partial"
     log "FAIL   $NF_ in-scope vs previous $P (< ${{MIN_RATIO}}%) — saved as .partial, NOT diffed."
     log "       Previous snapshot stays authoritative. Investigate before trusting the next delta."
+    notify_event monitor-quarantined "monitor run quarantined" \
+      "$NF_ names vs previous $P (< ${{MIN_RATIO}}%) — snapshot saved .partial, NOT diffed. Read the monitor log."
     exit 2
   fi
 fi
@@ -196,8 +210,15 @@ fi
 
 # A recorded success must mean every promised dimension completed. If any active dimension failed or
 # was quarantined, the run is degraded — exit 2 so cmd_run, the cron log and the ledger all see it.
+PENDN=0; [ -f "$PENDING" ] && PENDN=$(wc -c < "$PENDING" | tr -d ' ')
+if [ "$PENDN" -gt "$PEND0" ]; then
+  notify_event monitor-delta "monitor delta pending review" \
+    "new delta block in monitor-pending.md — read with: tools/monitor.py pending"
+fi
 if [ "$RUN_FAILED" = "1" ]; then
   log "DEGRADED  one or more active dimensions failed or were quarantined this run — exit 2"
+  notify_event monitor-quarantined "monitor run degraded" \
+    "one or more active dimensions failed or were quarantined — read the monitor log"
   exit 2
 fi
 exit 0
@@ -518,11 +539,31 @@ def cmd_enable(args):
            stdin=("# generated from scope.md out-of-scope section\n"
                   + "\n".join(excludes) + ("\n" if excludes else "")))
 
+    # The job runs on the VPS where config.json does not exist. When notification channels are
+    # configured locally, push a standalone copy (webhook URLs are credentials: chmod 600) so the
+    # cron job can ping on deltas, quarantines and failures. No channels -> the job's
+    # notify_event() stays a silent no-op.
+    import json as _json
+    import config as _config
+    _flat = _config.load()
+    _channels = _flat.get("notify.channels") or []
+    if _channels:
+        codedir = _flat.get("vps.codedir", "~/hunterstick")
+        remote(f"mkdir -p {codedir}/tools")
+        remote(f"cat > {codedir}/notify.json",
+               stdin=_json.dumps({"channels": _channels,
+                                  "strict": bool(_flat.get("notify.strict"))}) + "\n")
+        remote(f"chmod 600 {codedir}/notify.json")
+        print(f"  notify       {len(_channels)} channel(s) — deltas, quarantines and failures ping it")
+    else:
+        print("  notify       off — set notify.channels in config.json to be pinged on deltas")
+
     active_block = (ACTIVE_BLOCK.replace("__HEADER_FLAGS__", hflags)
                                 .replace("__MAXJS__", str(args.max_js)))
     body = REMOTE_SCRIPT.format(marker=MARKER, target=name, min_ratio=args.min_ratio,
                                 keep_days=args.keep_days, active=1 if args.active else 0,
-                                rate=args.rate or 0, active_block=active_block)
+                                rate=args.rate or 0, active_block=active_block,
+                                codedir=_config.load().get("vps.codedir", "~/hunterstick"))
     remote(f"cat > {script}", stdin=body)
     remote(f"chmod +x {script}")
 

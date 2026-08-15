@@ -48,6 +48,14 @@ coverage tier you ran and what it structurally excludes.
    disclosed routing case in the traps.
 6. **What you excluded and why** — CDN-owned addresses skipped, the tier's known blind spots, the
    fraction of the address set you actually reached inside the budget.
+7. **More than a banner off the products this file already names as the payload.** A default
+   `nmap -sV` stops at a version string. `zgrab2` (the ZMap project's own scanner) and a handful of
+   product-specific unauthenticated calls get past it on exactly the services signal 2 and the
+   coverage tradeoff already identify as worth the packets: Redis `INFO`, MongoDB `isMaster`,
+   Docker `/version` + `/containers/json`, an unauthenticated Kubernetes `/api`, RabbitMQ
+   `/api/overview`, Consul `/v1/catalog/services`, Elasticsearch `/_cat/indices`. These are the
+   same named products the disclosed-corpus data above already justifies scanning for — this signal
+   is "how to get more than a banner off them," not a new target list.
 
 ## The coverage tradeoff, measured
 
@@ -68,11 +76,18 @@ products: **Jira 29 · Kubernetes 24 · Docker 23 · Grafana 21 · Jenkins 17** 
 8080/8443/3000/9090/8090/10250, just outside top-100 but comfortably **inside top-1000**.
 
 **Reconciled rule:** top-1000 as the default, plus a targeted web-service high-port list
-(8000–8010, 8080–8090, 8443, 3000, 9090, 9200, 9000, 10250, 5000, 7001). Full range only with a
-reason you can state. **The datastore-port framing is a prior, not a measurement** — it is
-well-formed and it is what the disclosed corpus fails to support, so run those ports if they are
-cheap, but do not budget against them. No ranked port→finding dataset exists in any source
-consulted; anyone publishing one is extrapolating.
+(8000–8010, 8080–8090, 8443, 3000, 9090, 9200, 9000, 10250, 5000, 7001, **6443, 2375, 2376, 2379**).
+Full range only with a reason you can state. **The datastore-port framing is a prior, not a
+measurement** — it is well-formed and it is what the disclosed corpus fails to support, so run
+those ports if they are cheap, but do not budget against them. No ranked port→finding dataset
+exists in any source consulted; anyone publishing one is extrapolating.
+
+**The list above used to stop at 10250 and that was this file's own conclusion not finishing
+itself.** Kubernetes (24 reports) and Docker (23) are named as the top two hit generators two
+paragraphs up, but only kubelet (10250) made the scan list — the Kubernetes **API server** (6443),
+the Docker daemon API (2375/2376) and etcd's client port (2379) never did, despite the file
+discussing exactly why they matter. Fixed above; the omission was a gap in applying this file's own
+data, not a new finding.
 
 The one clean port-driven case study with a figure attached: **9200 Elasticsearch, $3,000** —
 unauthenticated, a single search query returning usernames, emails, passwords and tokens.

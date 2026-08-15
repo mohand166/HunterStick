@@ -27,6 +27,7 @@ Usage
     tools/roles.py --list                              every role -> path
     tools/roles.py @hosts.resolved                     -> recon/resolved.txt   (relative)
     tools/roles.py path targets/acme @hosts.resolved   -> targets/acme/recon/resolved.txt
+    tools/roles.py path targets/acme @app.current --host app.acme.com
     tools/roles.py path targets/acme @hosts.resolved --require   exit 2 if absent/empty
 
 Exit: 0 ok · 2 unknown role, unreadable table, or --require unmet.
@@ -36,6 +37,9 @@ import argparse
 import re
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import applib  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA = ROOT / "playbooks" / "system" / "target-schema.md"
@@ -86,6 +90,7 @@ def load(schema=SCHEMA):
 
 
 HUNTER_PREFIX = "@hunter."
+DYNAMIC_PREFIX = "<dynamic:"
 
 
 def is_hunter_supplied(role):
@@ -102,6 +107,35 @@ def resolve(role, schema=SCHEMA):
     """Relative path for a role, or None if the role is unknown or hunter-supplied."""
     hit = load(schema).get(role)
     return hit[0] if hit else None
+
+
+def is_dynamic_path(path):
+    """Whether a role needs the invocation's exact subject before it has a path."""
+    return bool(path and path.startswith(DYNAMIC_PREFIX))
+
+
+def resolve_path(target, role, host=None, schema=SCHEMA):
+    """Resolve static roles and the host-selected application role through one interface."""
+    rel = resolve(role, schema)
+    if rel is None:
+        return None, None
+    if not is_dynamic_path(rel):
+        return Path(target) / rel, None
+    if role != "@app.current":
+        return None, f"unsupported dynamic role {role}"
+    if not host:
+        return None, f"{role} needs the exact host/URL (`--host`)"
+    try:
+        resolution = applib.resolve(target, host)
+    except ValueError as error:
+        return None, str(error)
+    if resolution.status == "ambiguous":
+        names = ", ".join(path.name for path in resolution.candidates)
+        return None, f"ambiguous application ({names}); supply an explicit port"
+    if resolution.status == "missing":
+        wanted = Path(target) / "applications" / resolution.subject.slug
+        return wanted, "missing"
+    return resolution.path, resolution.state
 
 
 def unknown(role, schema=SCHEMA):
@@ -123,6 +157,7 @@ def main():
     ap.add_argument("--list", action="store_true", help="print every role and its path")
     ap.add_argument("--require", action="store_true",
                     help="with 'path': exit 2 unless the file exists and is non-empty")
+    ap.add_argument("--host", help="exact URL/host for a dynamic role such as @app.current")
     args = ap.parse_args()
 
     roles = load()
@@ -144,7 +179,10 @@ def main():
         if rel is None:
             print(f"FAIL — {unknown(role)}", file=sys.stderr)
             return 2
-        full = tdir / rel
+        full, dynamic_state = resolve_path(tdir, role, args.host)
+        if full is None:
+            print(f"FAIL — {dynamic_state}", file=sys.stderr)
+            return 2
         print(full)
         if args.require:
             # A directory counts as present when it holds anything; a file when it is non-empty.
@@ -154,7 +192,8 @@ def main():
                 print(f"FAIL — {role} resolves to {full}, which does not exist. Produced by: "
                       f"{roles[role][1]}.", file=sys.stderr)
                 return 2
-            empty = (not any(full.iterdir())) if full.is_dir() else full.stat().st_size == 0
+            empty = ((dynamic_state == "scaffold") if is_dynamic_path(rel) else
+                     ((not any(full.iterdir())) if full.is_dir() else full.stat().st_size == 0))
             if empty:
                 print(f"FAIL — {role} resolves to {full}, which is EMPTY. That is a real result, "
                       f"not a missing file — decide deliberately before running on it.",

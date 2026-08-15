@@ -33,15 +33,19 @@ file. For an exactly named skill even that is skipped: you were told what to run
 | `AGENTS.md` | The canonical instruction set — identity, the load order, the router table, scope rules, the coverage model, the refusal list. The one file that must be read before anything else on any runtime. | **ALWAYS**, first |
 | `CLAUDE.md` | A three-line pointer to `AGENTS.md`, existing only because Claude Code auto-loads this filename. Deliberately carries no rules of its own so the two can never drift. | **ALWAYS** (Claude Code auto-loads) |
 | `README.md` | The GitHub front page and hunter guide: problem, architecture, setup by runtime, daily capabilities, monitoring, and deeper references. | **HUMAN** |
+| `CHANGELOG.md` | Dated, newest-first record of user-visible project changes. It tracks repository evolution, not target activity or releases. | **HUMAN** |
 | `assets/banner.png` | The HunterStick banner displayed at the top of `README.md`. | **HUMAN** |
 | `assets/logo.png` | The standalone HunterStick logo for project and publication use. | **HUMAN** |
 | `assets/hunterstick-execution-context-flow.png` | The detailed human-directed execution and persistent-context diagram embedded in `README.md`. | **HUMAN** |
 | `TOOLS.md` | Tool behavior grouped by hunting intent, with the execution/side-effect model and pointers to each CLI's live `--help`. | **HUMAN** |
 | `SKILL-OUTPUTS.md` | Hunter-facing output map: what every recon skill, vulnerability class, flow and workflow writes to the local brain or VPS heavy store. | **HUMAN** |
 | `CUSTOMIZE.md` | Maintainer guide for adding classes, skills, flows, integrations and deterministic tools without bloating runtime context. | **HUMAN** |
+| `METHODOLOGY.md` | The hunter's working reference during a session: compact numbered lists grouped by *want* — wide scope (org mapping, asset discovery, narrowing) and single app (surface reading incl. content discovery, understanding, hunting) — every line is *run when you need X → outputs Y → use it on Z*, plus continuous, routers-and-meta, and always-rules sections. Names every skill in the library; a test enforces that it stays complete. | **HUMAN** |
+| `CHANGELOG.md` | User-visible repository changes by date, newest first — workspace evolution, not target activity. Read it when you want to know what changed and when; update it in the same commit as the change it describes. | **HUMAN** |
 | `VALIDATION-ROUND-1.md` | Historical issue ledger from the first live harness validation. Explicitly not current operating instructions; retained because each regression has provenance. | **HUMAN** |
 | `LICENSE` | MIT. | **HUMAN** |
-| `config.example.json` | The shape of `config.json` with every value blank — researcher handle, required attribution header, VPS address, API keys. Copy it, fill it, never commit it. | **HUMAN** (copied once at setup) |
+| `config.example.json` | The shape of `config.json` with every value blank — researcher handle, required attribution header, VPS address, API keys, notification channels. Copy it, fill it, never commit it. | **HUMAN** (copied once at setup) |
+| `lessons.example.md` | The shape of `lessons.md` (gitignored): the hunter's cross-target lessons, ≤50 rows, promoted deliberately, loaded only at orient/prioritize moments. | **HUMAN** (copied once; the live file never ships) |
 | `.gitignore` | The publication boundary, and load-bearing: it excludes every live target, `config.json`, `TARGETS.md` and the report corpus, so only the empty skeleton ships. | **HUMAN** |
 | `.mcp.json` | Wires two MCP servers: `chrome` (Playwright, for rendering SPAs and reading the DOM) and `burp` (SSE on `127.0.0.1:9876`, for proxy history). | Read by the runtime at startup, not by the model |
 | `FILEMAP.md` | This file. | **HUMAN** |
@@ -50,7 +54,7 @@ file. For an exactly named skill even that is skipped: you were told what to run
 
 ## `skills/` — the bodies · `.claude/skills/` — the pointers
 
-**Thirty-two skills, one body each.** A skill body lives once under
+**Thirty-five skills, one body each.** A skill body lives once under
 `skills/<category>/<name>.md`. The category is human navigation; the stable invocation remains
 the slug (`subdomain-enumeration`, not `know-your-target/subdomain-enumeration`). Each
 `.claude/skills/<name>/SKILL.md` carries only the frontmatter a runtime matches on plus a
@@ -95,7 +99,7 @@ adding a category cannot silently shadow another skill.
 
 ## `tools/` — the executable layer
 
-None of these programs decide what to hunt: two are import-only helpers and the rest
+None of these programs decide what to hunt: some are import-only helpers and the rest
 compute, validate or record. The ones
 that send traffic or change the brain append their exit code to `targets/<t>/logs/tools.tsv` via
 `runlog`, so a failure survives the session that caused it; the read-only derivers (`target-graph.py`,
@@ -103,18 +107,20 @@ that send traffic or change the brain append their exit code to `targets/<t>/log
 
 | file | what it is | when it runs |
 |---|---|---|
-| `brief.py` | The session brief. Lists every target with its phase, blockers and last activity; `--resume` prints where one was interrupted; `--rules` prints `AGENTS.md` verbatim for runtimes that cannot read files. | **EXEC** — first command of every session |
+| `brief.py` | The session brief. Lists every target with its phase, blockers and last activity; `--resume` prints where one was interrupted; `--host` adds only the resolved app brain to the read set; `--rules` prints `AGENTS.md` verbatim for runtimes that cannot read files. | **EXEC** — first command of every session |
+| `app-context.py` | Resolves one URL/host/host:port to one application brain and prints its exact files; `ensure` creates the scaffold atomically. Templates and sibling hosts never satisfy the selection. | **EXEC** — before one-app work and during application mapping |
+| `applib.py` | Canonical application-subject parser, identity reader, scaffold-state check, and resolver shared by app-context, brief, roles, and preflight. | Imported, never run directly |
 | `config.py` | The single source of truth for machine config — researcher handle, attribution header, VPS, API keys. `check` redacts secrets; an unset value is a named blocker, never a silent default. | **EXEC** — session start, and before anything needing credentials |
 | `scopelib.py` | **The one scope parser**, imported by the twelve tools that read or route on scope. Normalizes invisible characters, separates `enumeration_roots()` (what may be widened from) from `authorises()` (what an asset is recorded against). It answers *what did the hunter name?* — `run.py` and `preflight.py` do not import it, because scope does not gate execution. | Imported, never run directly |
 | `scope-filter.py` | Filters a host list down to what `scope.md` authorises, before a tool sees it. `--roots` prints the authorised enumeration seeds. | **EXEC** — between any two recon phases |
 | `calibrate.py` | Performs the calibration gate instead of describing it: baseline plus three impossible paths, compared on status/length/words/redirect, verdict `clean`/`broken`/`unknown` with an evidence artifact. Exists because preflight enforced the gate, kb stored the verdict, and nothing produced one — so it read UNRECORDED for an entire engagement. | **EXEC** — before any discovery phase whose counts you intend to trust |
 | `rdap-org.py` | Who an IP range is *registered* to — RDAP (JSON over HTTPS), the WHOIS replacement that needs no package and no sudo. `--expect <company>` makes corroboration mechanical: any row whose org does not match is reported UNCONFIRMED and the exit is non-zero. Exists because a scanner's ASN *label* is not evidence: on one estate it labelled 36 ASNs with the company name and RDAP refuted three — two registered to private individuals — whose 62 CIDRs were already in the scope allowlist. | **EXEC** — inside `asn-and-ip-discovery`, before any CIDR reaches `scope.md` |
 | `wildcard-check.py` | Re-verifies a hostname list against DNS wildcards **independently of whatever produced it** — two impossible labels per parent, and every child of a parent that answers is dropped. Exists because a resolver's own filter is not enough: on one run puredns reported 11 wildcard roots, still left 21 artifacts in its output and missed 4 real parents. Exit 1 = wildcards filtered, 2 = could not check. | **EXEC** — after any brute/permutation stage, before results reach `recon/subdomains.txt` |
-| `init-target.py` | Scaffolds a target brain atomically: builds in a temp dir and renames, so an interrupted run leaves nothing. Refuses to overwrite, asserts all 12 required files, derives the allowlist only from domain-shaped scope. | **EXEC** — once per target |
-| `preflight.py` | *What does this skill have to work with?* Parses the skill's own `## Inputs` section rather than a second registry, resolves its roles, and reports what is present. The one thing it flags as blocking is a **missing required input** — the admission gate (exit 1: cannot run as asked). It does **not** gate on scope, accounts or calibration; the hunter decides those. A prompt-subject skill reports PROMPT-CHECK REQUIRED until `--provided` confirms the subject. | **EXEC** — before every skill |
+| `init-target.py` | Scaffolds a target brain atomically: builds in a temp dir and renames, so an interrupted run leaves nothing. Refuses to overwrite, asserts all required files, derives the allowlist only from domain-shaped scope. | **EXEC** — once per target |
+| `preflight.py` | *What does this skill have to work with?* Parses the skill's own `## Inputs` section rather than a second registry, resolves its roles, and reports what is present. `--host` supplies `@hunter.host` and resolves `@app.current` without loading sibling apps. The one thing it flags as blocking is a **missing required input** — the admission gate (exit 1: cannot run as asked). | **EXEC** — before every skill |
 | `skilllib.py` | The one recursive skill-body resolver. Discovers categorized bodies from frontmatter, resolves stable slugs and partial names, reports the canonical repository path, and rejects duplicate slugs. | Imported, never run directly |
 | `graph.py` | The dependency graph, **computed** from each skill's `## Inputs` joined against the role table — `--entry` answers "where do I start", `--check` runs in CI. It replaced a hand-written graph in which every phase number was wrong after a renumbering, including a bullet that contradicted itself in one sentence; prose cannot be executed, so it drifted silently. | **EXEC** — when the next move is unclear |
-| `roles.py` | Resolves an input role (`@hosts.resolved`) to a path through the one `## Input roles` table in `target-schema.md`. Exists because a path written into two dozen playbooks rots in two dozen places — `host-correlation-and-clustering` blocked on five filenames that were missing their `recon/` prefix, while every one of those files existed. An unknown role fails loudly with near misses. | **EXEC** — whenever a command needs a brain path |
+| `roles.py` | Resolves an input role (`@hosts.resolved`) to a path through the one `## Input roles` table in `target-schema.md`; dynamic `@app.current` additionally needs `--host`. An unknown or unresolved role fails loudly. | **EXEC** — whenever a command needs a brain path |
 | `vps.sh` | Runs a command on the VPS, or moves a file across the boundary. Replaces holding the connection in a shell variable, which works in bash and silently fails in zsh — the trap that has bitten this repo three times. Stable `argv[0]`, so it can be allowlisted once. | **EXEC** — every remote command |
 | `target-graph.py` | Derives the engagement graph from the brain on demand (never stored): joins `kb.py`'s host trust-edges to the findings/hypotheses so a **low-sev primitive becomes a chain seed**. `--chains` names READY and PARTIAL chains (and the missing half to hunt); `--linkage <node>` is one blast radius. | **EXEC** — when reasoning about chains or prioritising by linkage |
 | `vps-run.py` | **Local pre-dispatch layer for HTTP commands.** Runs where `config.json` is, so the privacy backstop actually fires: refuses researcher private identity anywhere and public attribution outside its designated header, rejects known-bad invocation contracts before SSH, injects that header only for CLIs whose syntax was verified, then dispatches `run.py` on the VPS. `--print` dry-runs; `--detach` starts the same direct scanner command in VPS tmux, keeping the contract visible. | **EXEC** — every HTTP command to a target |
@@ -127,6 +133,11 @@ that send traffic or change the brain append their exit code to `targets/<t>/log
 | `runlog.py` | The append-only invocation log. Wraps every tool's `main()`, redacts credential-bearing arguments, and records the exit code. `--failures` answers "what broke while I was away?". | Imported by all tools; **EXEC** to read the log |
 | `kb.py` | The observation and run ledgers. Appends facts with provenance (`observed` > `reported` > `inferred`), opens and closes runs, and computes `patterns`, `chains`, `cohort` and `reassess` across the whole history. | **EXEC** — before traffic (open run), after (record facts) |
 | `coverage.py` | Subtracts `tested.md` from `attack-surface.md` and prints the cells nobody has tested, keyed on `entrypoint × class × principal × variant`. Fails loud on schema drift instead of quietly under-counting. | **EXEC** — when deciding what to test next |
+| `progress.py` | Generates `progress.md` by joining bounded runs, vulnerability probes, and pulled command records. Shows scope-wide history, per-host/IP work, exact redacted commands/options, wordlist/input hashes, outcomes, and evidence without inventing host attribution for set-based commands. | **EXEC** — after a unit of work and after pulling VPS execution records |
+| `notify.py` | Fire-and-forget event notifications to any webhook channel configured under `notify.channels`. Spools on delivery failure and retries later, redacts by default (`strict` strips the target name), and never lets a webhook problem break a finished run. Channel URLs are credentials: `check` shows only SET. | **EXEC** — `test` to verify a channel; called by `vps-run.py`, `monitor.py` jobs, `techwatch.py`, the runbook digest |
+| `techwatch.py` | Asks OSV and the CISA KEV feed which published advisories affect the versions recorded in `recon/components.md`. Sends no traffic to the target; proposes a cohort sweep, never runs one; lists unversioned and unmapped components instead of clearing them. Writes `tech-watch.md` and notifies on NEW matches. | **EXEC** — after `component-inventory`; part of an evening runbook |
+| `runbook.py` | Validates the target's `runbook.md` (every step resolves; `when` vocabulary holds) and prints the ordered plan with live per-step state — ready, blocked-missing-input, condition-not-met. Plans and validates; never executes a step. | **EXEC** — first command of the `runbook` skill |
+| `netlib.py` | The shared verify-ON TLS context that falls back to certifi only when the default store is empty (bare python.org installs ship a dead CA path). Used for non-target HTTPS: webhooks, OSV, CISA. | Imported by `notify.py` / `techwatch.py`; never run directly |
 | `cluster.py` | Groups an httpx JSONL run by exact body hash + observed IP as **unconfirmed response-similarity candidates**. It annotates likely edges/CDNs and catch-alls, but never calls the pair an app, deployment, duplicate, or `shares-backend` fact; a second independent axis must confirm it. | **EXEC** — after http-probing, for `host-correlation-and-clustering` |
 | `suggest-flows.py` | Computes which flow applies from the brain's own numbers — and, with `--why`, states what it *cannot* determine. Never guesses. | **EXEC** — when the next move is unclear |
 | `import-http.py` | Turns captured traffic (HAR, Burp XML, Burp sitemap) into structured endpoints in the brain. Refuses out-of-scope hosts rather than importing them. | **EXEC** — after a browsing/proxy session |
@@ -334,6 +345,9 @@ rather than an absent file nobody notices.
 | `scope-evidence.md` | Where the scope statement came from and when, so a later disagreement is resolvable without re-reading the program page. | **ON DEMAND** — on a dispute, not every turn |
 | `attack-surface.md` | The recon→testing bridge. **Rows start at `http-probing`** — a probed host is an entrypoint, appended unranked; `technology-fingerprinting`, `javascript-analysis`, `api-discovery` and `application-mapping` add classes and variants; `attack-surface-prioritization` ranks what is there. Its `variants` column is what makes a coverage cell resolvable. | **ON DEMAND** — from fingerprinting onward |
 | `tested.md` | **One row per probe actually sent.** Evidence history, not intent. A row for something never touched makes `coverage.py` count a cell that does not exist. | **ON DEMAND** — written after every probe |
+| `progress.md` | Generated hunter-facing activity view: scope-wide runs, then per-host/IP commands and vulnerability probes. Exact redacted argv and input hashes come from `logs/exec/*.json`; unresolved set-based commands remain separate. | Generated by `progress.py`; read on resume or by the hunter |
+| `runbook.md` | The hunter's saved standing order: an ordered table of steps approved once and edited only by them. The `runbook` skill executes it as one bundle; `runbook.py` validates it. Absent file = no standing order, never generated mid-run. | Read by the `runbook` skill; edited only by the hunter |
+| `tech-watch.md` | Generated advisory-vs-stack report: NEW/current matches with KEV flags, unversioned and unmatched buckets, proposed cohort commands. | Generated by `techwatch.py`; read when deciding on a sweep |
 | `hypotheses.md` | Testable ideas, ranked, each with its expected signal. | **ON DEMAND** |
 | `clusters.md` | `host-correlation-and-clustering` output: hosts that share a backend, and the representative to test first. A cluster is a hypothesis until a differential probe proves it. | **ON DEMAND** |
 | `user-flows.md` | The journeys a real user takes through the application — the source of state-machine and workflow-abuse candidates. | **ON DEMAND** |
@@ -352,7 +366,7 @@ rather than an absent file nobody notices.
 | `recon/cloud.md` | `cloud-asset-discovery` — buckets, blobs, functions and their access state. |  |
 | `recon/repos.md` | `repository-and-secret-recon` — repos, exposed `.git`, dork hits. Secrets redacted. |  |
 | `recon/content/` · `recon/wordlists/` | Content-discovery output, and wordlists **derived from this target's own vocabulary** — never a generic list. |  |
-| `applications/_host-template/map.md` | `application-mapping` — copied to `applications/<host>/` when an app is deep-mapped. Routes, roles, state transitions. |  |
+| `applications/_host-template/map.md` | `application-mapping` scaffold — created as `applications/<host[-port]>/` through `app-context.py ensure`, never treated as app data itself. Routes, roles, state transitions. |  |
 | `applications/_host-template/endpoints.md` | App-specific endpoints, including authenticated-only ones. |  |
 | `applications/_host-template/notes.md` | Free-form mapping observations, every line tagged FACT / HYPOTHESIS / ASSUMPTION. |  |
 | `investigations/README.md` | The `<lead>/` convention: one directory per lead being worked. |  |
@@ -392,13 +406,13 @@ Where each piece actually enters, start to finish.
 |---|---|---|
 | 1 | Session opens | `AGENTS.md` → `orchestrator.md` (**ALWAYS**, ~28 KB); `class-signals.md` only when orienting/recommending |
 | 2 | Orient | `tools/brief.py`, `tools/config.py check`, `TARGETS.md` |
-| 3 | Human names a target | `targets/<t>/index.md` · `target.md` · `scope.md` · `accounts.md` |
+| 3 | Human names a target | `targets/<t>/index.md` · `progress.md` · `target.md` · `scope.md` · `accounts.md` |
 | 4 | Human asks for something | a skill fires → **one** playbook loads |
 | 5 | New target? | the router → `skills/setup/init-target.md` → `tools/init-target.py` → the brain exists, then STOP |
 | 6 | Before any traffic | `tools/preflight.py` (missing required input = stop) → `tools/kb.py run --status running` |
 | 7 | Select the supplied subject | one exact host or the applicable recorded set; ingest tools reconcile newly discovered outside data |
 | 8 | The command | HTTP: `tools/vps-run.py` → local privacy/attribution boundary → VPS `run.py`; non-HTTP: `run.py` directly. Both record evidence. |
-| 9 | After | normalize into `recon/*`, `tools/kb.py add`, `reassess`, `patterns`, close the run |
+| 9 | After | normalize into `recon/*`, `tools/kb.py add`, `reassess`, `patterns`, close the run, pull execution records, regenerate `progress.md` |
 | 10 | Decide next | `tools/coverage.py`, `tools/suggest-flows.py` |
 | 11 | Test | `vuln-hunt` → `_master-vuln-hunting.md` + one class file → row in `tested.md` |
 | 12 | Anything failed? | `tools/runlog.py --failures` |

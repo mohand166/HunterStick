@@ -123,6 +123,13 @@ finally the one skill required for the task. Accounts, technology references, an
 enter the context only when that skill needs them. The complete skill and playbook library is never
 loaded into every turn.
 
+When the task names one application—an exact host, host:port, URL, or a request containing a
+host—the runtime resolves its per-app brain and loads only that app's map, endpoints, and notes.
+It does not load every application in the engagement. A missing app map narrows the context rather
+than borrowing a sibling's data; multiple port-specific maps require the exact port. This selection
+is mechanical through [`app-context.py`](tools/app-context.py), so a new session or different model
+reconstructs the same application context.
+
 ### 3. Required inputs are verified
 
 Each skill declares the input roles it consumes. Preflight resolves those roles against the target
@@ -159,6 +166,12 @@ work against a richer target brain.
 Each target has its own directory of readable Markdown and TSV files. There is no vector database
 and no hidden memory service. A human can inspect, diff, correct, and version the reasoning state.
 
+Inside that target brain, each deeply mapped application has a smaller brain under
+`applications/<host[-port]>/`: `map.md`, `endpoints.md`, and `notes.md`. Target-wide facts stay at
+the target level; one-app tasks load the matching application directory alongside them. This keeps
+shared context available without letting facts from `admin.acme.com` silently become facts about
+`shop.acme.com`.
+
 ```mermaid
 flowchart TD
     A[Human decisions<br/>Target activity<br/>Collected evidence]
@@ -192,6 +205,10 @@ flowchart TD
   and trust relationships, each carrying its source and confidence.
 - **Work state** — which runs started or failed, what is worth investigating, open hypotheses, and
   exactly which `entrypoint × class × principal × variant` cells were tested.
+- **Human-readable progress** — `progress.md` shows scope-wide runs and a table grouped by each
+  host/IP, including the skill, tool, exact redacted command and options, wordlist/input hashes,
+  result, and evidence pointer. Set-based commands remain explicitly unresolved instead of being
+  guessed onto every host.
 - **Evidence and dispositions** — request/response artifacts and the findings they support,
   including rejected cases so they are not rediscovered as new.
 
@@ -260,6 +277,12 @@ The load-bearing distinction is:
 
 Subtracting the second from the first produces honest coverage. One request cannot mark a whole
 endpoint or vulnerability class complete, and a new principal or bypass family remains a new test.
+
+To see what has actually been done without reading the ledgers directly, open
+`targets/<name>/progress.md`. After VPS work, HunterStick pulls the small `logs/exec/*.json`
+command records and regenerates the view with `tools/progress.py targets/<name>`. Secrets remain
+redacted; wordlists and other input files are named with their recorded hash so the run can be
+reproduced later.
 
 ### Local brain, remote bulk
 
@@ -435,6 +458,10 @@ impact argument, tested variant, and novelty decision are stored in the target b
 | Evidence | Normalized output plus provenance pointer | Stored request and response plus reproducible interpretation |
 | Completion | Objective reached with bounds and limitations recorded | Planned variants resolved or parked, or minimum proof complete |
 
+Both sides update the same generated `progress.md` view: the scope-wide table summarizes bounded
+runs, while each exact host/IP gets its own table of skills, tools or vulnerability probes,
+redacted commands/options, input files and wordlist hashes, outcomes, and evidence pointers.
+
 ## Start here
 
 ### Requirements
@@ -605,10 +632,14 @@ cross-host replay—remain explicitly set-based.
 | “Discover hidden content.” | [Content discovery](skills/surface-discovery/content-discovery.md) |
 | “Extract routes and secrets from JavaScript.” | [JavaScript analysis](skills/surface-discovery/javascript-analysis.md) |
 | “Map this application.” | [Application mapping](skills/application-understanding/application-mapping.md) |
+| “Browse the app logged in” · “validate this DOM XSS / postMessage finding in a real browser.” | [Browser exploration](skills/application-understanding/browser-exploration.md) — rendered routes, runtime network, storage/CSP, interactive validation |
 | “Recover the API contract.” | [API discovery](skills/surface-discovery/api-discovery.md) |
 | “Find accepted parameters.” | [Parameter discovery](skills/surface-discovery/parameter-discovery.md) |
 | “Turn these endpoints into testable properties.” | [Derive properties](skills/context-and-prioritization/derive-properties.md) |
 | “Prioritize the attack surface.” | [Attack-surface prioritization](skills/context-and-prioritization/attack-surface-prioritization.md) |
+| “Hunt Spring Boot / WordPress / Laravel misconfigs on this host.” | [Component hunt](skills/vulnerability-testing/component-hunt.md) — the stack's `## Checks` catalog, actively probed |
+| “Check advisories against what acme runs.” | [`tools/techwatch.py`](tools/techwatch.py) — OSV + CISA KEV vs the recorded components; proposes a sweep |
+| “Run my evening runbook on acme.” | [Runbook](skills/orchestration/runbook.md) — the saved standing order as one bundle ending in one brief |
 
 Run `tools/preflight.py <target> --list` to see every available skill name. The complete repository
 map, including asset, infrastructure, synthesis, and handoff skills, is in
@@ -706,8 +737,17 @@ tools/monitor.py disable targets/acme
 The pending delta remains available until a later user-directed session reviews it and decides
 whether to derive properties, re-prioritize the affected slice, or invoke a vulnerability skill.
 `brief.py <target> --resume` performs a read-only monitor-status check and surfaces pending deltas,
-quarantined runs, and recent failures. It does not process or clear them. HunterStick does not send
-external notifications in the current version.
+quarantined runs, and recent failures. It does not process or clear them.
+
+#### Notifications
+
+Configure any webhook channel — Discord, Slack, Teams, ntfy, Gotify, a Telegram bot — under
+`notify.channels` in `config.json` (a bare URL works; a custom payload template per channel is
+optional) and verify it with `tools/notify.py test`. Monitor deltas, quarantined runs, failed
+runs, new advisories from tech-watch, and the runbook digest ping it; per-run completion is
+opt-in. Delivery is fire-and-forget with a local spool, so a dead webhook never breaks a
+finished run. Payloads carry the target slug, event kind and one line — never commands or
+artifact contents — and `notify.strict: true` redacts even the target name.
 
 ### Other focused entry points
 
@@ -748,7 +788,7 @@ reconstructing it from chat.
 
 ## What is included
 
-- **32 skills** focused on recon, analysis, hunting, monitoring, importing, and task composition
+- **35 skills** focused on recon, analysis, hunting, monitoring, importing, and task composition
 - **45 vulnerability classes** with variants, evidence expectations, and exit criteria
 - **10 situation flows** that bundle explicitly authorized multi-step responses to common dead ends
 - **14 analysis workflows** plus technology-specific context
@@ -762,6 +802,8 @@ record, and verify the interface surface; they do not choose what the hunter sho
 
 | Document | Read it when you want to |
 |---|---|
+| [CHANGELOG.md](CHANGELOG.md) | See what changed and when, newest first |
+| [METHODOLOGY.md](METHODOLOGY.md) | The hunter's working checklist — every skill, when to run it, what it outputs |
 | [FILEMAP.md](FILEMAP.md) | Locate every repository and target-brain file and see when it enters context |
 | [SKILL-OUTPUTS.md](SKILL-OUTPUTS.md) | See what every recon skill, vulnerability class, flow, and workflow writes locally and on the VPS |
 | [TOOLS.md](TOOLS.md) | See what each tool reads, writes, sends, records, and refuses |

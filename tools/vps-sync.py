@@ -349,6 +349,15 @@ def _pull_evidence(t, rt, host, rsh, dry_run):
     recs = [l for l in er.stdout.splitlines() if l.strip().endswith(".json")]
     print(f"  evidence records: {'pulled ' + str(len(recs)) if recs else 'none new'} "
           f"-> logs/exec/  (run.py's proof of what executed)")
+    if not dry_run:
+        try:
+            sys.path.insert(0, str(ROOT / "tools"))
+            import progress
+            (t / "progress.md").write_text(progress.render(t), encoding="utf-8")
+            print("  progress view: regenerated -> progress.md")
+        except Exception as exc:                               # noqa: BLE001 - pull still succeeded
+            print(f"  warning: progress.md was not regenerated ({type(exc).__name__}: {exc}); "
+                  f"run tools/progress.py {t}")
     return 0
 
 

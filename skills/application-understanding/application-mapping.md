@@ -29,7 +29,8 @@ and be explicit about which conclusions the available principals could and could
   UI-reachable routes is a deliverable in its own right.
 - `@endpoints` (optional, from `api-discovery`) — the operation set. Without it you can still map
   from traffic; with it you get the surface diff in signal 4 for free.
-- `@appmap` (optional) — a previous map of this app, so this run reports what changed.
+- `@app.current` (optional) — a previous map selected from the exact `@hunter.host`, so this run
+  reports what changed without loading a sibling application.
 - `@accounts` (optional, from `init-target`) — principals. **Not a gate on this skill.** See below.
 
 **As the selector, at least one of the following:**
@@ -130,9 +131,10 @@ carry on with the rest of the map. Do not present accounts as a precondition for
 
 ## Outputs
 
-- `@appmap` — `applications/<host>/`: `map.md` (features, roles, trust boundaries, state machines,
+- `@app.current` — `applications/<host[-port]>/`: `map.md` (features, roles, trust boundaries, state machines,
   auth flow), `endpoints.md` (app-specific operations, including ones the UI never invokes),
-  `notes.md`.
+  `notes.md`. Resolve or create it with `tools/app-context.py ensure targets/<t> <host-or-url>`;
+  never copy the template by guessing a directory name.
 - `@endpoints` — operations discovered here that the API inventory did not have.
 - Facts via `kb.py add`: the tenancy model, the role set, each URL-fetching feature with its two
   properties, each renderer, each AI-backed feature, the invite answers.

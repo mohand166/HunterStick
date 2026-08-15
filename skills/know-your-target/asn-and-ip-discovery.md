@@ -52,6 +52,33 @@ because only the name lets you send the right `Host` and SNI.
    whichever way it comes out.
 2. **Attributed netblocks** — range, registered org string, and the corroborating signal. Two
    signals before a range becomes authorised, same rule as `organization-and-roots`.
+2a. **The BGP-announced prefix set for every attributed ASN, not just the RDAP-registered ranges.**
+    `rdap-org.py` answers "who owns this address" for a range you already have; it does not answer
+    "what is every prefix this ASN currently announces." Those diverge — registered allocations and
+    live routing are different datasets, and a sub-allocation, a leased block, or a prefix RDAP's
+    org-name search would never surface can still be announced under the same ASN. Two named,
+    working sources, no auth required: `https://bgp.tools/table.txt` (or bulk whois on
+    `bgp.tools:43` — `begin` / `as<NUM>` / `end`) dumps the live global routing table, refreshed
+    roughly every 30 minutes; a descriptive User-Agent is required or requests get blocked, and it
+    should not be polled faster than that refresh interval. RIPEstat's
+    `https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS<NUM>` is an independent
+    second source with a built-in confidence signal (`min_peers_seeing` — how many RIS route
+    collectors observed the announcement), which doubles as the second corroborating signal below
+    rather than needing a separate one. **`asnmap` (already installed via `pdtm`) is *not* this
+    source** — it is backed by a periodically-rebuilt IPtoASN snapshot, not a live RIB dump, and has
+    documented drift from bgp.tools/bgpview when cross-checked; treat its output as enriched RDAP,
+    not as "currently announced." Treat a BGP-only prefix the same as any other candidate range: it
+    still needs the two-signal corroboration above before anything is authorised against it.
+2b. **The cloud providers' own published IP-range files as a third, free corroboration source —
+    and the only one that separates CDN-edge from customer-compute *within a single ASN*.**
+    `ip-ranges.amazonaws.com/ip-ranges.json`, Azure Service Tags (Microsoft Download Center, updated
+    weekly), and `gstatic.com/ipranges/cloud.json` tag each range by service (AWS's file separates
+    `CLOUDFRONT` from `EC2`, for instance) — answering "is this the target's own instance or a CDN
+    PoP" without needing a cert read, which RDAP and BGP data alone cannot do since both operate at
+    the ASN/prefix level, not the service level. All three are primary/official. RPKI ROA data
+    (via RIPEstat or Cloudflare's RPKI portal) is a related, lower-priority free signal: it states
+    which ASN is *authorised* to originate a prefix, directly relevant given the measured 36→33
+    ASN-mislabeling incident above.
 3. **Colo, legacy and acquisition-era ranges.** On an own-ASN estate this is the payload of the
    whole skill: address space that predates the current platform, running things the current
    platform team does not own.
@@ -71,6 +98,26 @@ because only the name lets you send the right `Host` and SNI.
 
    Searching a scanning dataset for the target **plus the keyword `internal`** is specifically
    called out as surfacing properties that never appeared in previous searches.
+4a. **Shodan's per-host `hostnames` field as a reverse-IP lookup, at no extra cost when Shodan is
+    already keyed.** `SecurityTrails`' reverse-IP/history lookup is the name hunters reach for by
+    habit, but it is a paid API — check `tools/config.py check` before assuming it. A plain
+    `shodan host <ip>` (or the equivalent API call) returns every hostname Shodan's own scanning has
+    observed resolving to that address, which answers the same question passively: sibling domains
+    on dedicated hosting, or a domain that used to point here and reveals past infrastructure.
+    Weaker than a purpose-built historical index — Shodan's coverage is whatever it has scanned, not
+    a dedicated passive-DNS archive — but it costs nothing beyond a key this project already has,
+    and Rapid7 Project Sonar's RDNS dataset (`subdomain-enumeration.md`) is the other free substitute
+    for the same question at internet scale.
+4b. **Query syntax for the scanning datasets already keyed in this project — Netlas and ZoomEye —
+    since neither is documented anywhere and both sit unused beyond generic passive-source duty.**
+    Netlas uses a Lucene-style query language; `http.favicon.hash_sha256:` and
+    `http.favicon.perceptual_hash:` give fuzzy favicon pivoting the exact-hash version above cannot.
+    ZoomEye: `app:"..."`, `device:"..."`, `iconhash:"..."`, `ssl.cert.subject.cn:"..."`, combined
+    with `+`/`-`/`()`/`&&`/`||`. FOFA (`title=`, `body=`, `header=`, `icon_hash=`, `app=`, `cert=`)
+    and Censys (`services.http.response.favicons.md5_hash=`) are the same idea on unkeyed engines —
+    worth knowing the syntax exists, lower priority than the two already paid for. Netlas' syntax is
+    primary-sourced from its own docs; ZoomEye's is corroborated across its own tooling and
+    independent write-ups but has no single canonical reference page — treat as good, not primary.
 5. **Origin candidates, with the precondition tested.** The ordered signal list is: SSRF or any
    outbound-forcing feature (the only *deterministic* method — the origin reports its own egress
    address) · historical DNS · CT SANs, which often carry the origin address or an internal
@@ -89,6 +136,15 @@ because only the name lets you send the right `Host` and SNI.
   **two were registered to private individuals** — after their 62 CIDRs had already been written
   into the scope allowlist on the strength of the label. Corroborate before a range is authorised;
   the failure mode here is sending packets to a stranger.
+- **JARM clusters by TLS-library version, not by owner.** `tlsx -jarm` and this file's own
+  favicon/JARM/cert-SAN clustering guidance already name it as a strong signal, but unlike every
+  other clustering axis here, JARM has no documented false-positive trap — and it needs one: two
+  unrelated hosts running the same TLS stack/Java version produce the same JARM hash, which is
+  exactly the collision pattern that made JARM-based threat-hunting (e.g. Cobalt Strike detection)
+  false-positive on legitimate servers. Corroborate with a second, independent axis before a JARM
+  match promotes a singleton to a finding — never let it stand alone. JA4H (FoxIO, 2023) is the
+  client-side analog and fingerprints outbound *request* shape, not a target's response — it is not
+  a substitute for JARM and does not help identify an unrecognised CDN/WAF response.
 - **Scanning provider space inventories the provider.** Shared CDN addresses will not answer with
   an application-level header, one address fronts thousands of unrelated customer names, and IPv6
   is not sweepable at all. Every open port on an edge address belongs to the edge. The result is
@@ -146,3 +202,10 @@ endpoints nothing name-driven will ever reach) · `subdomain-enumeration` or `dn
 certificate SANs you just collected are new names and new roots, and they re-enter the graph there)
 · `derive-properties` (turning any of this into a testable, propertied surface happens there, not
 here).
+
+**Attributed own-ASN and colo ranges are the priority candidate set for VHost fuzzing** — the same
+gated, offer-not-run step `subdomain-enumeration` names. This estate is where an address plausibly
+fronts more than one internal, staging or forgotten name; provider/CDN edge ranges are explicitly
+the wrong target for that same fuzz — they were just excluded here for the identical reason
+(fuzzing edge space enumerates the CDN's other customers, not this target). Hand the attributed
+netblocks forward by name when offering the fuzz, not the full resolved-address list undifferentiated.

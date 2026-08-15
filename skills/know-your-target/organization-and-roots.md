@@ -67,6 +67,48 @@ are sourced; neither is a licence to skip evidence.
 7. **Coverage honesty.** Which pivots ran, which needed a paid dataset you do not have, and
    therefore the knowable margin by which the root set is incomplete. Apex diversity is the metric
    here; subdomain count is an anti-metric.
+8. **Mobile app-store metadata as a *verified*, not claimed, ownership signal.** Two distinct
+   mechanisms, neither reducible to "check the app store": Play Console and App Store Connect both
+   **platform-verify** the developer-website field before publishing a listing, so it stands as one
+   of the two independent signals signal 1 requires — it is not the applicant's unverified claim.
+   Separately, `assetlinks.json` (Android Digital Asset Links) and `apple-app-site-association`
+   (iOS Universal Links) are **cryptographic two-way bindings**: the domain hosts a file naming the
+   app's package ID and signing-cert hash, and the app's own entitlements name the domain back.
+   Recovering either file — from a live fetch or from a mobile teardown already done for
+   `repository-and-secret-recon` — gives a verified apex, and a target's own AASA file can list
+   associated domains no other pivot here would surface. Mechanism-level sourcing is primary
+   (Apple/Google's own documentation); the technique itself is unchanged since it was first
+   popularised in 2019 and is still current.
+9. **WHOIS *history*, distinct from the current-WHOIS/RDAP corroboration in signal 1.** Post-GDPR
+   redaction degraded current WHOIS, not historical snapshots — free-tier sources (WhoisFreaks,
+   Whoxy) still carry pre-redaction registrant data. This is the direct corroborating check for the
+   CT-log-outlives-ownership trap already documented in `subdomain-enumeration.md`: a prior
+   registrant string reused elsewhere, or proof a domain changed hands, resolves exactly the
+   ambiguity that trap describes. Vendor-sourced claims about corpus size are marketing copy; the
+   free-tier availability itself is verifiable.
+10. **GitHub/GitLab organisation discovery, as entity expansion — distinct from
+    `repository-and-secret-recon`'s secret-hunting scope.** The org's code-hosting presence, and
+    commit-author email domains pivoted to the employee's personal account, can surface internal
+    tool names or unannounced acquisitions in a bio or a starred/pinned repo. Practitioner-sourced
+    (tools in this space extract commit emails/keys and pivot email→account), not disclosed-report-
+    grounded — treat findings from this pivot as leads to corroborate, not standalone facts.
+11. **M&A filings (Crunchbase, SEC EDGAR, press releases) catch an acquisition before signal 3's
+    DNS-based pivots structurally can.** Reverse-nameserver and reverse-DMARC only surface an
+    acquisition *after* its DNS/mail infrastructure integrates with the parent; a filing or press
+    release names it the day it's announced. The logic is sound but the citation is weaker than the
+    Jhaddix-sourced entries above — no disclosed report backs this specific technique, only generic
+    advice repeated across practitioner posts. Run it once per target, dated, and frame it with that
+    weaker confidence rather than presenting it as equally proven.
+12. **Breach-data pivoting for naming conventions — real, but authorisation-sensitive; read the
+    caution before the technique.** HIBP-style domain search and credential corpora can reveal an
+    org's email-naming convention or internal tool names mentioned in leaked source. But HIBP's own
+    domain-search feature requires **proving ownership** of the domain being queried — querying it
+    against an arbitrary bug-bounty target is outside its intended use, and pulling PII from breach
+    corpora sits closer to a program's scope edge than anything else in this file, which is
+    otherwise careful to separate ownership from authorisation. Prefer the lower-exposure
+    alternative first: email-pattern-inference tools that derive the naming convention from public
+    sources without touching breach dumps. If breach data is used anyway, that is a decision for the
+    hunter to make explicitly, not a default step this skill runs.
 
 ## Known traps — measured or sourced, each costs real time
 

@@ -50,7 +50,7 @@ targets/<target>/
     cloud.md            buckets, blobs, cloud assets
     repos.md            code repos, leaked secrets, org GitHub findings
 
-  applications/<host>/  ← per-app deep map (created during app-mapping)
+  applications/<host[-port]>/  ← per-app deep map (created during app-mapping)
     map.md              features, user roles, trust boundaries, auth flow
     endpoints.md        app-specific endpoint inventory
     notes.md            working notes / observations
@@ -58,6 +58,9 @@ targets/<target>/
   attack-surface.md     ← RANKED inventory. The recon→testing bridge. Scored (see model).
   hypotheses.md         ← testing backlog: id · target · class · rationale · status
   tested.md             ← dedup log: what was tested, when, result, fix-locus key
+  progress.md           ← GENERATED hunter view: scope-wide runs + per-host/IP commands/tests
+  runbook.md            ← the hunter's saved standing order (optional; edited only by the hunter)
+  tech-watch.md         ← GENERATED advisory-vs-stack report from tools/techwatch.py
   user-flows.md         ← journeys through the app: steps, principals, objects and state changes
   clusters.md           ← backend clusters (host-correlation-and-clustering); attack-surface.md links to these
   runs.tsv              ← APPEND-ONLY record of BOUNDED runs: run_id · phase · selector ·
@@ -80,6 +83,20 @@ targets/<target>/
                            stay on the VPS; this holds request/response artifacts that
                            back FACTs and findings.
 ```
+
+### Exact application context
+
+The target brain is engagement-wide, but deep application knowledge is isolated by exact host and
+optional port. Run `tools/app-context.py resolve targets/<t> <url-or-host>` before a one-app task;
+it reads the identity from `map.md`, ignores `_host-template`, refuses to choose between ambiguous
+port variants, and prints only that app's three files. `tools/brief.py <t> --host <subject>` and
+`--resume --host` use the same resolver.
+
+`@app.current` is therefore a dynamic role, not the whole `applications/` directory. Preflight
+resolves it only when `--host` supplies the invocation subject. An existing sibling application or
+the template cannot make it present. When a map is needed and absent,
+`tools/app-context.py ensure targets/<t> <subject>` creates its scaffold atomically; the mapping
+skill then fills it with evidence.
 
 ### The VPS side — what lives there, and why the split is where it is
 
@@ -156,6 +173,7 @@ A role has none of those failure modes: rename an artifact and you edit **one ro
 | `@hunter.technology` | `<supplied in the prompt>` | the hunter |
 | `@hunter.flow` | `<supplied in the prompt>` | the hunter |
 | `@hunter.host` | `<supplied in the prompt>` | the hunter |
+| `@hunter.ips` | `<supplied in the prompt>` | the hunter — one or more IPs, a CIDR, or a named group given directly in the request; takes priority over any inferred candidate set |
 | `@scope` | `scope.md` | `init-target` |
 | `@target` | `target.md` | `organization-and-roots` |
 | `@accounts` | `accounts.md` | `init-target` (filled by the hunter) |
@@ -174,10 +192,10 @@ A role has none of those failure modes: rename an artifact and you edit **one ro
 | `@params` | `recon/parameters.txt` | `javascript-analysis` / `parameter-discovery` |
 | `@js` | `recon/js-findings.md` | `javascript-analysis` |
 | `@content` | `recon/content/` | `content-discovery` |
-| `@wordlists` | `recon/wordlists/` | `content-discovery` / `parameter-discovery` |
+| `@wordlists` | `recon/wordlists/` | `content-discovery` / `parameter-discovery` / `subdomain-enumeration` (target-derived Host-header/vhost list) |
 | `@cloud` | `recon/cloud.md` | `cloud-asset-discovery` |
 | `@repos` | `recon/repos.md` | `repository-and-secret-recon` |
-| `@appmap` | `applications/` | `application-mapping` |
+| `@app.current` | `<dynamic:application>` | `application-mapping` |
 | `@clusters` | `clusters.md` | `host-correlation-and-clustering` |
 | `@surface` | `attack-surface.md` | `derive-properties` |
 | `@hypotheses` | `hypotheses.md` | `generate-hypotheses` |
@@ -432,6 +450,14 @@ still reading as current, so ask the files instead: `wc -l` for a list, `tools/c
 **`missing` and `0` are different states** and must stay distinguishable: a missing file is a
 preflight failure for the skill that needs it, an empty one is a real (if disappointing) result.
 `tools/dashboard.py` computes both from the files rather than repeating a claim.
+
+`progress.md` is also derived, but it is deliberately checked in with each brain so the hunter can
+open one readable file. `tools/progress.py <target-dir>` regenerates it from the authoritative
+`runs.tsv`, `tested.md`, and pulled `logs/exec/*.json`. The first table describes work over the
+scope; each exact host/IP then gets its own table with the skill/class, tool or activity, redacted
+command/options or manual method, input/wordlist hashes, outcome and evidence. A file-based or
+set-based command whose members cannot be proved remains in the multi-asset/unresolved table; it
+must never be expanded into guessed per-host coverage.
 
 `<target>` is whichever target the human named. `targets/TARGETS.md` is the registry of what
 exists — it is not a pointer, and nothing "switches" to a target.

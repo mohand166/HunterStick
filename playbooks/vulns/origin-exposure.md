@@ -11,12 +11,17 @@
 
 ## 1. Model the edge before you touch anything
 
-**SOURCE** — the leak channels that can name the backend: DNS history (`SecurityTrails`/`crt.sh`/
-passive DNS) showing the pre-CDN A record; SPF/MX records or mail headers revealing the mail server
-on the same host; `crt.sh` certificate SANs mapping to direct-hosted subdomains; server-status or
-error pages echoing an internal IP; SSRF or verbose stack traces leaking it; a
-`dev`/`staging`/`origin`/`direct` subdomain pointed straight at the backend; default vhost
-responses; favicon/JARM/content hashes on services like Shodan/Censys matching the origin.
+**SOURCE** — the leak channels that can name the backend: DNS history showing the pre-CDN A record
+— `SecurityTrails`' reverse-IP/history lookup is the well-known name for this, but it is a **paid
+API**; check `tools/config.py check` before assuming it is available rather than citing it from
+habit. Where it is not keyed, `crt.sh` and passive DNS cover the same ground more cheaply, and
+Shodan's per-host `hostnames` field (`shodan host <ip>`) is a live reverse-IP substitute that costs
+nothing extra when Shodan is already keyed, per `asn-and-ip-discovery.md`; SPF/MX records or mail
+headers revealing the mail server on the same host; `crt.sh` certificate SANs mapping to
+direct-hosted subdomains; server-status or error pages echoing an internal IP; SSRF or verbose
+stack traces leaking it; a `dev`/`staging`/`origin`/`direct` subdomain pointed straight at the
+backend; default vhost responses; favicon/JARM/content hashes on services like Shodan/Censys
+matching the origin.
 
 **FEED** — the CDN/WAF fronting the asset (Cloudflare, Akamai, Fastly, etc.). Tech signals from
 `technologies.md`: edge headers (`CF-RAY`, `Server: cloudflare`, `X-Served-By`), a WAF challenge on
@@ -113,8 +118,8 @@ edge), origins exposing **internal-only apps or admin panels**, and origins reac
 
 *Model:* the main host is behind Cloudflare (`CF-RAY`, a WAF challenge per `technologies.md`), so the
 edge is hiding the backend and enforcing WAF filtering and rate limits. *Derive:* passive DNS history
-(`SecurityTrails`/`crt.sh`) shows a pre-CDN A record and the MX/SPF points at the same IP — a
-plausible origin leak, discovered passively. *Context:* exposure only matters if bypassing the edge
+(`crt.sh`, Shodan's `hostnames` field, or `SecurityTrails` where keyed) shows a pre-CDN A record and
+the MX/SPF points at the same IP — a plausible origin leak, discovered passively. *Context:* exposure only matters if bypassing the edge
 *gains* something, so note what the edge protects first; then the discriminator for identity is
 whether that IP *serves the same app* when I send the real `Host` — a shared-host IP that 403s every
 `Host` is not the origin. *Hypothesis:* the leaked IP is the true origin and is not firewalled to

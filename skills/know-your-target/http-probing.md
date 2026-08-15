@@ -52,6 +52,27 @@ skills can mine it instead of re-probing.
    probed. Reconcile before touching.
 7. **Catch-all candidates.** Which exact responses repeat through the same observed IP. This is a
    correlation lead, not an app/backend count; confirmation belongs to clustering.
+8. **The protocol spoken per host — h1-only vs h2 — captured once here instead of re-discovered
+   later.** `playbooks/vulns/request-smuggling.md` already does deep H1/H2 downgrade-chain analysis,
+   but it currently has to re-probe protocol support from scratch every time because this skill
+   doesn't record it. One field, captured for free during the probe you're already sending.
+9. **The `Allow:` header from one `OPTIONS` request per host, read passively as an identity signal.**
+   A framework fingerprint and, occasionally, a hidden verb (`PATCH`, `PURGE`) nobody's wordlist
+   would guess. TRACE/XST is not worth chasing — modern browsers block it via XHR and it isn't a
+   live technique. This is one extra request per host, ordinary-volume.
+10. **A UA/Accept differential pass over a sample of the live set.** 2–3 variants (default browser,
+    mobile, bot/empty UA), diffed by the body hash this skill already computes for catch-all
+    clustering — no new machinery, just a second probe per sampled host. Catches mobile-only API
+    branches and UA-gated content a single-request sweep never sees. PortSwigger's own catalogued
+    issue class ("user-agent-dependent response") is the primary source; this is an established
+    technique, not a novel one, and the gap was that nothing here ran it.
+11. **Response-time differential across the gated surface (signal 3), as an existence oracle
+    independent of caching.** Distinct from this toolkit's existing cache-timing coverage —
+    measured internet-observable timing precision (15–100µs, Vanderlinden et al. 2024) can
+    distinguish valid-vs-invalid identifiers or authorization states by latency alone on gated
+    endpoints, the same mechanism behind disclosed timing-based username-enumeration findings on
+    login/reset flows. Filter jitter with a repeated baseline before trusting a delta — same
+    discipline as the reflection-delta method in `parameter-discovery.md`.
 
 ## Known traps — each of these has produced a confident wrong answer
 
@@ -61,6 +82,17 @@ skills can mine it instead of re-probing.
 - **Title is not identity on a shared edge.** One estate returned the same vendor title on 4,889 of
   6,546 endpoints. Deduping on title collapses the whole estate to nothing. A **body hash**
   discriminated properly there — its largest cluster was 159. Cluster on the hash.
+- **Body hash has a blind spot symmetric to the title trap: a JS-rendered SPA shell.** `httpx` reads
+  what the server sent, not what a browser would show. A React/Vue/Angular estate typically serves
+  the *same* near-empty HTML shell — the framework's bootstrap markup — from every distinct
+  application, so body-hash clustering can collapse genuinely different apps into one bucket the
+  same way title did, just one layer deeper. It also means signal 5 (auth entrypoints **by shape**)
+  is unreadable from the raw response on any host that gates its login behind client-side routing —
+  the shell looks identical whether the route requires auth or not. `gowitness` (already in this
+  toolkit's install set) renders in a real headless browser and is the fix: a screenshot pass over
+  the live set, same ordinary-volume category as the HTTP probe itself — one render per host, not a
+  fuzz — so it runs by default here, not gated. Perceptual-hash the screenshots as a second
+  clustering axis alongside body hash, not instead of it; the two catch different blind spots.
 - **"No CDN detected" is not "not fronted."** The probe only labels providers it recognises.
   The estate's private edge fronted 98% of its hosts and was never flagged. Absence of the field means
   unmatched, and you must say so rather than reporting the origin's server as the origin's.
@@ -79,7 +111,10 @@ skills can mine it instead of re-probing.
 
 Keep the full structured output on the VPS and record its path. `technology-fingerprinting`,
 `url-collection`, `javascript-analysis` and `derive-properties` all re-read it rather than
-re-probing — a second probe of an estate is traffic you already spent.
+re-probing — a second probe of an estate is traffic you already spent. The `gowitness` screenshots
+belong beside it, not thrown away after clustering — a hunter scanning a rendered-page gallery
+spots the odd-one-out (an admin panel, a stack trace, a default install page) far faster than
+reading a table of hashes, and `host-correlation-and-clustering` reuses them as its second axis.
 
 ## Outputs
 
@@ -94,7 +129,9 @@ re-probing — a second probe of an estate is traffic you already spent.
 `@hosts.live` is populated and deduped; the IP-only responders are counted and not silently
 merged into the name-driven set; the gated surface is counted; the fronting picture is recorded so
 nobody later mistakes the edge for the origin. If the probe covered only part of the input — some
-ports, some of the list — that is written down next to the count.
+ports, some of the list — that is written down next to the count. A screenshot pass ran over the
+live set, or the run says why not (no `gowitness`/headless Chrome available, budget too tight for
+the estate's size) — the same one-sentence discipline as any other skipped default-on technique.
 
 ## Next
 

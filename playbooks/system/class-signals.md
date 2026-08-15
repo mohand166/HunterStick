@@ -169,7 +169,11 @@ the signal → phase lookup.
 | the target is live and changing | `monitoring-and-diff` |
 | a stack is fingerprinted but no component has a **version** — n-day work is blocked | `component-inventory` |
 | a stack is named or fingerprinted and you need what it **changes** | `tech-analysis` |
+| the human wants the stack's known misconfigs **actively probed** on a host — actuator, wp-json, exposed configs | `component-hunt` |
+| the stack is fingerprinted and advisories should be checked against the recorded versions | `tools/techwatch.py` → the n-day sweep workflow on a match |
+| a client-side or post-login surface needs a **real browser** — rendered routes, runtime network, DOM validation | `browser-exploration` |
 | `dns-analysis` left a **dangling record** or takeover candidate unadjudicated | `subdomain-takeover` |
+| the hunter's saved **standing order** should run as one bundle — "run my evening pass" | `runbook` |
 
 `derive-properties` is the row that most often goes unnoticed, because nothing fails without it:
 recon keeps producing hosts and the attack surface stays empty, so every class looks inapplicable

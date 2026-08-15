@@ -74,5 +74,23 @@
     "burp_proxy": "http://127.0.0.1:8080",
     "interactsh_server": "",
     "resolvers_url": "https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt"
+  },
+  "notify": {
+    "_note": [
+      "Fire-and-forget event notifications to any webhook channel: Discord, Slack, Teams,",
+      "ntfy, Gotify, Telegram — anything that accepts an HTTP POST. A channel is",
+      "{name, url, headers?, template?}; the default body carries both 'text' and 'content'",
+      "keys so a bare URL works for Slack/Teams (text) and Discord (content) without a template.",
+      "URLs contain credentials and are never printed — `config.py check` shows only SET.",
+      "strict: replace the target name with '(redacted)' — a webhook is a third party.",
+      "on_run_failed / on_run_completed: which run events notify. Failures default on,",
+      "per-run completion defaults off (a long session would ping forty times).",
+      "Events: monitor-delta, monitor-quarantined, run-failed, run-completed, tech-watch,",
+      "runbook-digest. Test yours:  tools/notify.py test --target acme"
+    ],
+    "channels": [],
+    "strict": false,
+    "on_run_failed": true,
+    "on_run_completed": false
   }
 }

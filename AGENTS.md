@@ -31,6 +31,7 @@ Then read, in this order, only what applies:
 | 3 | `playbooks/system/class-signals.md` | **load when the task is orient / suggest / "what next?"** — request analysis, property derivation, coverage, or recommending a class/phase/flow the human did not ask for. It is the catalogue: surface-property vocabulary → **45 vuln classes**, signal → **the recon skills**, situation → **10 flows**, one line each. You cannot recommend what you do not know exists — but for an **exactly named skill** you do not need the whole catalogue, so skip it and save the context. A map, never a substitute for the file it points at. |
 | 4 | `targets/<named>/index.md` | the manifest of **the target the human named** — nothing else |
 | 5 | `targets/<named>/target.md` · `scope.md` | profile · **what the hunter said they are testing.** `scope.md` always loads because it is context you reason with — a model that enumerates can widen one apex into three thousand names. It is ~30 lines. It is **not** a gate: see *Scope is the hunter's* below. |
+| 5a | `tools/app-context.py resolve targets/<named> <host-or-url>` **when the task names one exact application** | prints only that app's `map.md`, `endpoints.md`, and `notes.md`. Load those files if present. A target-wide or multi-host task does not select one app, so it does not load all sibling applications. |
 | 6 | `accounts.md` **only when the task involves a principal** | authenticated recon, authz, IDOR, multi-tenant, privesc. Unauthenticated recon does not need it and should not pay for it. |
 | — | `scope-evidence.md` **only on a dispute** | where the scope statement came from. You consult provenance when something disagrees, not every turn. |
 
@@ -40,6 +41,12 @@ match it against each `targets/*/scope.md` to work out **which brain it belongs 
 → ask which; no match → say so and ask where to file it, because writing one engagement's recon
 into another's brain is unrecoverable without version control. That is a question about
 bookkeeping, not authorisation. **Otherwise ask.** Never carry over the last target you touched.
+
+**Which application?** Once the target is known, an exact host, host:port, URL, or pasted request
+host is resolved through `app-context.py`; directory names are not guessed. One matching app brain
+loads, no match means the skill runs without prior app context (or `application-mapping` creates
+it), and two port-specific matches means ask for the port. The `_host-template` is never data and
+one application's files never satisfy another host's input.
 
 **Do not preload `skills/` or `playbooks/`.** Read the one skill the human invoked, plus the one
 reference it names, when they invoke it. `class-signals.md` loads only when you are orienting or
@@ -52,13 +59,17 @@ to `AGENTS.md` + `orchestrator.md` + the named target's small files.
 
 | the human says something like | load |
 |---|---|
-| "resume acme" · "where were we" · "continue hunting acme" | `tools/brief.py <t> --resume` — unfinished work, standing decisions, stale inputs, the exact read set |
+| "resume acme" · "where were we" · "continue hunting acme" | `tools/brief.py <t> --resume [--host <subject> when one app was named]` — unfinished work, standing decisions, stale inputs, the exact read set |
 | "initialize a new target" · "start a new program" · any requested work naming a target with no directory | `skills/setup/init-target.md` — scaffold from the supplied scope. An explicit initialization stops after scaffolding; if initialization was only a prerequisite to a named task, continue with that task after the required scope decisions are settled. |
-| "run subdomain enum" · "http probe the estate" · "prioritize the surface" · any named recon objective | `skills/shared/_recon-method.md` **+ the one categorized body resolved by its slug** — `tools/preflight.py <t> --list` groups and names them all; `skills/README.md` is the human map |
+| "run subdomain enum" · "http probe the estate" · "prioritize the surface" · any **narrow, single-skill** recon objective naming what one skill file does | `skills/shared/_recon-method.md` **+ the one categorized body resolved by its slug** — `tools/preflight.py <t> --list` groups and names them all; `skills/README.md` is the human map |
 | "test for IDOR on /api/orders" · "check access control" · "look for logic bugs" | `skills/vulnerability-testing/vuln-hunt.md` → `playbooks/vulns/_master-vuln-hunting.md` **+ one class file** |
 | "here's a request from Burp, analyse it" | `skills/analysis/analyse-request.md` |
-| "what should I run on acme" · "this host 404s everything" · "run the dead-end flow" | `skills/orchestration/run-flow.md` → `tools/suggest-flows.py` → one `playbooks/flows/*.md` |
+| "what should I run on acme" · "this host 404s everything" · "run the dead-end flow" · "map acme's assets" · "full asset discovery on acme" · "what does acme have out there" — a **broad outcome ask that names no single skill** | `skills/orchestration/run-flow.md` → `tools/suggest-flows.py` → one `playbooks/flows/*.md` (a fresh target's version of this is `first-look`, which chains subdomain-enumeration → live-host-validation → http-probing → technology-fingerprinting). This row is the one to use when the ask sounds broad — a keyword match on one recon skill's name ("subdomains", "ports") is not evidence the human wants only that skill; a **situation** routes here, a **named objective** routes above. |
 | "monitor subdomains for acme" · "watch this target" | `skills/monitoring/monitoring-and-diff.md` + `tools/monitor.py enable` |
+| "browse the app" · "explore it logged in" · "authenticated crawl" · "use Chrome/Burp on it" · "validate this DOM XSS / postMessage finding in a browser" | `skills/application-understanding/browser-exploration.md` — rendered routes, runtime network, storage/CSP, interactive validation via the browser MCP |
+| "hunt spring boot / wordpress / laravel on this host" · "check this stack's known misconfigs" | `skills/vulnerability-testing/component-hunt.md` → the stack's `## Checks` catalog in `playbooks/tech/<stack>.md`; read-only probes, hits become hypotheses |
+| "run my evening runbook" · "the usual pass on acme" · "execute the standing order" | `skills/orchestration/runbook.md` + `tools/runbook.py` — the hunter's saved sequence, one authorized bundle, one closing brief |
+| "check advisories against acme's stack" · "any new CVEs for what they run?" | `tools/techwatch.py <t>` (OSV + CISA KEV, passive, no target traffic) → proposes `playbooks/workflows/n-day-sweep.md` on a match |
 | "import this Burp/HAR capture" · "here's an export from Burp" | `playbooks/workflows/import-traffic.md` + `tools/import-http.py` |
 | "recover lazy chunks" · "find every Webpack/Next chunk" | `playbooks/workflows/recover-js-chunks.md` + `tools/chunks.py`; parse locally, fetch only the scoped candidate frontier |
 | "test every Rails host against this CVE" · "sweep the cohort for log4j" | `playbooks/workflows/n-day-sweep.md` + `tools/kb.py cohort` → `tools/sweep.py` |
@@ -67,7 +78,7 @@ to `AGENTS.md` + `orchestrator.md` + the named target's small files.
 | a multi-step ask no single skill covers — "extract JS from the 404s, pull params, test them", "chain X into Y" | `skills/orchestration/compose-task.md` — decompose into existing skills + glue, run through the harness |
 
 **Skill availability is a property of the runtime, not the model vendor.** Any runtime that
-discovers `.claude/skills/*/SKILL.md` exposes all **32** skills — Claude Code does, and so does
+discovers `.claude/skills/*/SKILL.md` exposes all **35** skills — Claude Code does, and so does
 OpenCode, whichever model you selected inside it (GPT, Claude, Kimi). There the frontmatter
 descriptions are resident and each body loads only when its skill fires. **On a runtime with no
 skill discovery**, there is no auto-dispatch: you are reading this file because someone pointed you
@@ -224,6 +235,13 @@ The test for anything ambiguous: **if the VPS died tonight, could you still reas
 tomorrow?** The VPS is disposable infrastructure. The brain is not.
 `tools/vps-sync.py status <target>` enforces this mechanically.
 
+`progress.md` is the hunter-facing execution view: scope-wide runs plus activity grouped by exact
+host/IP, including redacted commands, options, wordlists/input hashes, status and evidence. It is
+generated from `runs.tsv`, `tested.md` and pulled `logs/exec/*.json`; never hand-edit it. After a
+unit that used the VPS, pull the small execution records and run `tools/progress.py targets/<t>`.
+If a command targeted a file or set and no exact member can be proved, it stays under
+multi-asset/unresolved instead of being guessed onto every host.
+
 **No VPS?** Set `vps.enabled: false` in `config.json`. Passive OSINT, local reasoning, request
 analysis, and manual browser work remain available. Active tool-driven recon phases that declare a
 VPS prerequisite must stop by name; they do not silently fall back to the hunter's home IP.
@@ -292,8 +310,13 @@ are the system files it does not cover:
 
 `brief.py [t] [--resume]` · `config.py check|ssh` · `suggest-flows.py <t>` · `coverage.py <t>` ·
 `kb.py add|run|runs|reassess|patterns|chains|cohort|vocab` · `dashboard.py <t>` ·
+`progress.py <t>` ·
+`app-context.py resolve|ensure <t> <host>` ·
 `import-http.py <t> <capture>` · `monitor.py enable|status|pending <t>` ·
 `sweep.py <t> --cohort … --rate …` · `vps-sync.py status|pull|push|demote <t>` ·
+`notify.py send|test|spool` (fire-and-forget webhooks; spools on failure) ·
+`techwatch.py <t>` (advisories vs recorded components; writes `tech-watch.md`) ·
+`runbook.py <t> [--check]` (validate + plan the saved standing order) ·
 `graph.py [--entry|--check]` · `roles.py path <t> <@role>` · `scopelib.py` (library) · `self-check.py`
 · `surface.py <t> js|spec <artifact>`
 
@@ -303,13 +326,19 @@ are the system files it does not cover:
 a temp dir and renames, so an interrupted run leaves nothing; refuses to overwrite; asserts
 every schema file before committing. **You run the interview; it does the writes.**
 
-`preflight.py <t> <skill>` — **what does this skill have to work with?** It reads the
+`preflight.py <t> <skill> [--host <url-or-host>]` — **what does this skill have to work with?** It reads the
 skill's own `## Inputs`, resolves each `@role` through the `## Input roles` table, and reports. The
 **one** thing it flags as blocking is a **missing required input** — the admission gate (exit 1:
 cannot run as asked; it names the input *and the skill that produces it*). It does **not** gate on
 scope, accounts, calibration or budget — those are inputs of the skills that need them, never global
 gates. Exit 0 ready · 1 a required input is missing (or a prompt-subject is unconfirmed) · 2 the
 check itself could not run.
+
+`app-context.py resolve|ensure <t> <url-or-host>` — selects the one per-application brain for an
+exact invocation. `resolve` is read-only and prints the precise read set; `ensure` atomically
+creates `applications/<host[-port]>/{map.md,endpoints.md,notes.md}` from the target template.
+Ambiguous port variants fail instead of loading both, and an untouched template never counts as
+an existing map.
 
 `vps-run.py <t> --skill <name> [--run-id ..] [--expect-file ..] [--detach <session>]
 -- <your command>` —

@@ -39,7 +39,17 @@ every in-scope name** — so a host that *changed* (a gate that appeared or vani
 shifted) surfaces, not only new names, and **(3) JS content** on the live 200s, keyed by the
 filename with its content-hash normalised away but **hashed on the raw body**, so a changed key, id
 or endpoint is never normalised into a false "unchanged" (the cost is that a build id baked into a
-bundle diffs as `JS-CHANGED` — triage it, do not silence it). Discovered JS URLs are **candidates,
+bundle diffs as `JS-CHANGED` — triage it, do not silence it).
+
+**CT log monitoring (CertStream, Cert Spotter) is a different mechanism from dimension 1, not a
+replacement for it.** `tools/monitor.py`'s subdomain dimension re-runs enumeration on an interval
+and diffs the result — real-time CT-log streaming instead catches a newly-issued cert for the
+target *between* scheduled intervals, narrowing the window between a subdomain going live and it
+being noticed. The bug-bounty-relevant case is the same one this file already states plainly:
+catching an endpoint before its feature launches is evidenced; beyond that, treat CT streaming the
+same way the header above treats continuous monitoring generally — sound mechanism, unproven yield
+beyond the narrow launch-window case. Not worth a fourth cron dimension on its own; worth naming as
+an option when the interval between scheduled runs is the thing that matters for a specific target. Discovered JS URLs are **candidates,
 not approved requests**: the job validates scheme (`http`/`https`) and host (in-scope apex, not
 excluded) *before* it fetches, records off-scope refs without touching them, and never sends the
 attribution header off-scope. Ports, params and full request/response bodies are **not** watched by

@@ -1,7 +1,8 @@
 # <host> — Application Map
 
-> `application-mapping`. Copy this `_host-template/` folder to `applications/<host>/` when you deep-map
-> an app. Chrome-MCP first (see `playbooks/system/mcp-tooling.md`); map per role.
+> `application-mapping`. Create this app brain with
+> `tools/app-context.py ensure targets/<t> <host-or-url>` when you deep-map an app; do not copy or
+> name it by hand. Chrome-MCP first (see `playbooks/system/mcp-tooling.md`); map per role.
 
 ## What the app does
 - <business function — this is what business-logic bugs are built from>

@@ -43,7 +43,7 @@ TARGETS = ROOT / "targets"
 # every file the schema promises. A scaffold missing one is not a scaffold.
 REQUIRED = [
     "index.md", "scope.md", "target.md", "accounts.md", "attack-surface.md",
-    "hypotheses.md", "tested.md", "clusters.md", "user-flows.md",
+    "hypotheses.md", "tested.md", "progress.md", "clusters.md", "user-flows.md",
     "observations.tsv", "runs.tsv", "recon/README.md",
 ]
 

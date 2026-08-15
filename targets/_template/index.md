@@ -43,6 +43,7 @@ is a thing that goes stale while still reading as current.
 | you want | ask |
 |---|---|
 | what has been run, with selectors and limitations | `tools/kb.py runs <target>` — reads `runs.tsv`, the authority |
+| what ran per host/IP, including exact redacted commands and wordlists | `progress.md` — regenerate with `tools/progress.py <target>` |
 | how many hosts / urls / params exist | `wc -l` the file, or `tools/coverage.py <target>` |
 | what the target has shown you | `tools/kb.py reassess <target>` · `patterns` · `chains` |
 | which skill can run right now | `tools/preflight.py <target> --list` |

@@ -80,3 +80,21 @@ dependency advisories and release-sensitive behavior.
 grants unintended privilege. SPA fallback can return the same shell with 200 for nonexistent paths;
 calibrate the body before counting routes. Stop attributing an API weakness to React once another
 server/control layer is identified—retain React only as the evidence source that revealed it.
+
+## 10 · Checks — the `component-hunt` catalog — mostly what does *not* belong here
+
+> Executed by `skills/vulnerability-testing/component-hunt.md` on a hunter-named host whose
+> fingerprint matches this profile. React is a client library with **no management plane of its
+> own**: almost everything worth probing is bundle- or DOM-level and belongs to
+> `javascript-analysis` and `browser-exploration`. This catalog exists to say that explicitly so
+> nobody invents "React checks" that spray.
+
+| check | precondition | probe | a hit is | safety | on hit → class | fix_locus |
+|---|---|---|---|---|---|---|
+| source maps | React fingerprint (§2) | append `.map` to evidenced chunk URLs | a real sourcemap JSON | read | feeds `javascript-analysis`; not a report | build config |
+| dev bundle in prod | React fingerprint | chunk URL/filename contains `.development` or dev warnings in console | development build shipped to production | read | evidence of weak build hygiene; lower-severity surface fact | build pipeline |
+| postMessage surface | iframe use or messaging evidenced in bundle/DOM | frame the app from a controlled origin and listen | any message received — especially token-bearing | read (listening is passive) | `postmessage` class via `browser-exploration`/`vuln-hunt` | origin validation in the sender/receiver |
+
+Anything beyond these three rows on a React host is either `javascript-analysis` (bundle
+content), `browser-exploration` (runtime DOM), or the backend stack's own catalog — route it
+there rather than growing this one.

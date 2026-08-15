@@ -122,6 +122,22 @@ def detached_remote_command(session, remote_command):
     return f"tmux new-session -d -s {shlex.quote(session)} {shlex.quote(remote_command)}"
 
 
+def _notify(event, args, line):
+    """Best-effort event notification. Never raises into the dispatch path — a webhook
+    problem must not turn a finished run into a confusing exit code."""
+    try:
+        sys.path.insert(0, str(HERE))
+        import config
+        import notify
+        flag = {"run-failed": "notify.on_run_failed", "run-completed": "notify.on_run_completed"}
+        if not config.load().get(flag[event], True):
+            return
+        notify.send(event, line, f"skill {args.skill} · runlog has the redacted command",
+                    target=args.target)
+    except (Exception, SystemExit):
+        pass
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -209,6 +225,10 @@ def main():
     if injected:
         print(f"  attribution '{attr_name}' injected for {Path(argv[0]).name}", file=sys.stderr)
     proc = subprocess.run(prefix + [remote_cmd])
+    if proc.returncode != 0:
+        _notify("run-failed", args, f"{Path(argv[0]).name} exited {proc.returncode}")
+    elif not args.detach and not args.print_only:
+        _notify("run-completed", args, f"{Path(argv[0]).name} completed")
     if args.detach and proc.returncode == 0:
         print(f"  detached in VPS tmux session '{args.detach}'; inspect with "
               f"tmux capture-pane -pt {args.detach}")

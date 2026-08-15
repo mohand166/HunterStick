@@ -53,7 +53,19 @@ wildcard picture that decides whether any generated-name list can be trusted.
    rather than one hostname. Unit42 counted **1,974 dangling NS records under 1,659 root domains**.
 4. **`NOERROR` with zero answers.** An Empty Non-Terminal: a label with no records of its own but
    live descendants. It is a **directive to recurse**, not a miss — `_spf.paypal.com` and
-   `slc.paypal.com` were both observed in this state with live children beneath them.
+   `slc.paypal.com` were both observed in this state with live children beneath them. The
+   distinguishing signal is the **rcode itself**, not answer-section emptiness — `NXDOMAIN` and
+   `NOERROR`-zero-answers both print nothing to parse, and only one of them is a lead; read the
+   status field the installed resolver actually exposes (`dig`'s `status:` header line; check
+   `dnsx --help`/its JSON output for the equivalent field before parsing one) rather than
+   inferring from "no answer" alone. **Acting on it**: an ENT parent is positive proof its branch
+   is populated, so re-scope the wordlist you already built to `*.<ENT-parent>` and re-fuzz —
+   narrower and higher-yield than a blind full-domain sweep, because this isn't a guess, it's
+   evidence. Also grep your own already-collected candidates for that suffix (the child is
+   sometimes already sitting in CT/JS-mining output, just never connected to this parent), and
+   try a CT-log wildcard search on the exact suffix (`%.<ENT-parent>` on crt.sh's identity
+   search). This composes: a child turned up by the re-fuzz can itself be another ENT one level
+   down, and the same loop runs again there.
 5. **The wildcard state, per level.** Three-way, not binary — see the traps. Record it as a property
    of each parent, because wildcards exist at one level and not another.
 6. **The CNAME chain as a supplier inventory.** Each hop names a vendor the organisation pays. That
@@ -65,6 +77,11 @@ wildcard picture that decides whether any generated-name list can be trusted.
    end in about ten seconds and produced `mx0`–`mx17.slc.paypal.com` and **`ipnpb.paypal.com`, a
    live postback API**, from names the org's own "third-party 1–4" convention emitted and no
    wordlist or CT log would ever produce. Read the limit in the traps before budgeting it.
+   **Domain-verification TXT tokens** (`google-site-verification=`, `MS=`,
+   `facebook-domain-verification=`, and similar) are a second, separate pivot inside the same
+   record set: the token prefix names the SaaS product in use, and the **same token value**
+   appearing on two different apexes is a same-owner correlation signal independent of DNS/cert
+   evidence — worth grepping for explicitly, not just reading past on the way to SPF/DMARC.
 8. **CAA `issuewild` at the apex.** A `*.example.com` certificate emits **one** CT entry, not one
    per host, so this record decides whether CT is near-complete: wildcards forbidden → every host
    needs its own leaf cert → **brute force buys almost nothing**; `issuewild` naming CAs or absent
@@ -75,6 +92,31 @@ wildcard picture that decides whether any generated-name list can be trusted.
    appears to publish it, so treat it as a strong prior, not a law.
 9. **RFC1918 addresses in public DNS**, and **NS delegation oddities** — a subtree delegated
    somewhere the rest of the estate is not.
+10. **DNSSEC posture, and zone-walk exposure where it is signed.** Check `dig +dnssec` for
+    `RRSIG`/`NSEC`/`NSEC3` before spending any budget on either path. A zone signed with plain
+    `NSEC` proves non-existence by returning the literal next name in canonical order — the
+    denial-of-existence record doubles as a zone listing, no guessing required. `NSEC3` hashes
+    owner names instead, so the same walk becomes offline hash-cracking against a wordlist
+    (`nsec3walker`, `nsec3map`), and whether that pays off depends on the zone's iteration count and
+    salt. *The mechanism above is textbook DNSSEC behavior; how rare plain `NSEC` is on a real
+    target today is this reference's own read of the current landscape, not a cited study — treat
+    it as a strong prior, not a law, the same caveat signal 8 carries for `issuewild`.*
+11. **`HTTPS`/`SVCB` records (RFC 9460, finalized November 2023).** A record type most tooling does
+    not query yet. Where present, its `ipv4hint`/`ipv6hint` parameters can name the origin server's
+    real address directly — published in DNS specifically to speed up connection setup, and a leak
+    channel behind a CDN structurally identical to the no-SNI default-cert leak in
+    `subdomain-enumeration.md`, just via a different record. Query it explicitly (`dig <name> HTTPS`
+    / `dig <name> SVCB`); nothing else in this file's checklist surfaces it. The mechanism is
+    primary-sourced (the RFC, vendor engineering docs); no disclosed report yet ties a leaked hint to
+    a finding, so treat a hit as a strong lead, not proof, the same hedge already applied to the
+    no-SNI technique.
+12. **DKIM selectors** (`<selector>._domainkey.<domain>` TXT records) — a second identity axis SPF/
+    DMARC do not cover. Dual value: the selector and key parameters are a vendor/ESP fingerprint like
+    the CNAME-chain inventory above, and a sub-1024-bit RSA DKIM key is an actual crackable
+    vulnerability, not just a fingerprint. Selectors must be guessed (common ones: `default`,
+    `google`, `selector1`/`selector2`, `k1`) — `dkimsc4n`-class tools wordlist this. Practitioner-
+    sourced, not disclosed-report-grounded; the RSA-key-strength angle is the part worth the extra
+    query.
 
 ## Known traps — measured, each has produced a confident wrong answer
 
@@ -115,6 +157,10 @@ wildcard picture that decides whether any generated-name list can be trusted.
   reachable if it shares an address with a public site. Passive sources only ever see names that
   were resolvable or certificated, so **this is a class of asset enumeration structurally cannot
   find.** Keep non-resolving names; do not delete them because this skill could not resolve them.
+- **NSEC3 zone walking is a hash-cracking budget question, not a free zone dump.** Estimate the
+  crack cost — iteration count, salt, wordlist size — before committing, the same discipline as the
+  permutation-tool budget trap in `subdomain-enumeration`. It also fails silently: a zone with
+  adequate NSEC3 parameters looks identical whether you spent one minute on it or one hour.
 
 ## Outputs
 

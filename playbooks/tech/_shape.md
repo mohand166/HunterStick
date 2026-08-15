@@ -60,6 +60,21 @@ freeze a CVE list into the profile.
 Name defaults that are not findings, third-party/CDN behavior the target does not own, soft-404s,
 and the evidence that should stop a dead line of testing.
 
+### 10 · Checks — the `component-hunt` catalog
+
+The stack's **behavioral** misconfigurations and exposures, as rows `component-hunt` executes
+verbatim. One request each, read-only (GET/HEAD/OPTIONS). Fixed columns, no exceptions:
+
+`check · precondition · probe · a hit is (the discriminator, never "status 200") · safety
+(read, or **presence-only** for anything bulky or secret-bearing) · on hit → class (canonical
+class name from `playbooks/vulns/_index.md`) · fix_locus`.
+
+What does **not** belong in a row: version-gated CVEs (the n-day sweep owns those — a catalog
+row would rot and duplicate its cohort list), anything that mutates, downloads a secret, or
+invokes a management operation. A framework with no meaningful catalog says so in one row and
+routes to the skill that owns the surface (`react.md` is the pattern) — an explicit "not here"
+beats a silent gap or an invented spray.
+
 ## Quality rules
 
 - Use canonical class names from `playbooks/vulns/_index.md`.

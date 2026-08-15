@@ -698,6 +698,19 @@ def render_dashboard(tdir):
                 f"run tools/dashboard.py {tdir} by hand")
 
 
+def render_progress(tdir):
+    """Refresh the generated hunter view when a run reaches a terminal state."""
+    try:
+        import importlib
+        progress = importlib.import_module("progress")
+        page = progress.render(tdir)
+        (tdir / "progress.md").write_text(page, encoding="utf-8")
+        return "progress.md regenerated"
+    except Exception as exc:                                   # noqa: BLE001 - run record wins
+        return (f"progress.md NOT regenerated ({exc.__class__.__name__}: {exc}) — "
+                f"run tools/progress.py {tdir} by hand")
+
+
 def cmd_run(args):
     """Record one BOUNDED run. There is no such thing as a phase being globally done."""
     tdir = target_of(args.target)
@@ -748,6 +761,7 @@ def cmd_run(args):
     # ends a phase and must leave the view current.
     if args.status != "running":
         print(f"  {render_dashboard(tdir)}")
+        print(f"  {render_progress(tdir)}")
     if args.status == "running":
         print("  Logged BEFORE the work. If this session dies, the next one sees an interrupted run\n"
               "  instead of nothing. Close it with:  kb.py run <t> --finish " + rid +

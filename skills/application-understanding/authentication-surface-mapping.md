@@ -110,8 +110,9 @@ a crafted credential, record it as a named hypothesis and hand it to hunting.
 
 ## Outputs
 
-- `@appmap` — the auth section of the per-app map: every flow, its endpoints, its call order, and
-  its error paths.
+- `@app.current` — the auth section of the exact host's per-app map: every flow, its endpoints, its
+  call order, and its error paths. Resolve or create it with
+  `tools/app-context.py ensure targets/<t> <host-or-url>` before writing.
 - `@target` — the auth model in prose under the profile: session mechanism, cookie scoping across
   the estate, IdPs, where authorization inputs are client-held. FACT/HYPOTHESIS tagged.
 - `@endpoints` — auth operations discovered here that were not in the API inventory.

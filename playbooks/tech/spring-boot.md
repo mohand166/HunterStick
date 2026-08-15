@@ -84,3 +84,24 @@ Health `UP`, a Whitelabel/error page, a route map or a version claim is not auto
 finding. Echo of a supplied path is reflection, not XSS without a rendering context. Stop when the
 management surface is not in scope, only DoS impact applies, or product/version/reachable feature
 cannot be established. Preserve proxy-versus-origin fingerprint conflicts as architecture evidence.
+
+## 10 · Checks — the `component-hunt` catalog
+
+> Executed by `skills/vulnerability-testing/component-hunt.md` on a hunter-named host whose
+> fingerprint matches this profile. One request per check, read-only; **presence-only** rows are
+> detected by response shape and their contents are never downloaded or invoked. Version-gated
+> CVEs deliberately do not live here — they belong to the n-day sweep.
+
+| check | precondition | probe | a hit is | safety | on hit → class | fix_locus |
+|---|---|---|---|---|---|---|
+| actuator discovery | Spring Boot fingerprint (§2) | `GET /actuator` | JSON with a `_links` map of endpoint names — not the SPA HTML fallback | read | route map → probe the rows below individually | management exposure config |
+| `mappings` exposed | actuator discovery hit | `GET /actuator/mappings` | JSON with `contexts`/dispatcher handler routes | read | unauthenticated route map → `function-level-authorization` worklist | `management.endpoints.web.exposure` |
+| `env` exposed | actuator discovery hit | `GET /actuator/env` | JSON with property-source keys | **presence-only** — record keys/count, never values | `origin-exposure` (secrets behind it) | exposure include + management bind address |
+| `heapdump` exposed | actuator discovery hit | `GET /actuator/heapdump` | 200 + octet-stream/JAVA profile size header | **presence-only** — never download | `origin-exposure` | exposure include + management port |
+| gateway routes | Spring Cloud Gateway in stack (§1) | `GET /actuator/gateway/routes` | JSON array of route definitions | read | route map + internal upstream hostnames → `origin-exposure`, `ssrf` leads | gateway actuator authz |
+| `httptrace`/`threaddump` | actuator discovery hit | `GET /actuator/httptrace` | JSON with recent exchange/trace entries | **presence-only** | `origin-exposure` (request data, stack frames) | exposure include |
+| alt management listener | §4's separate management port/address claim | `GET :8081/actuator`, `:9090/actuator`, `/manage/actuator` — one each | any of the shapes above | read, max 4 requests | as the matching row above | management server port/base-path config |
+
+Version-gated lines (Actuator SpEL injection, Gateway CVE chains, deserialization advisories)
+enter through `n-day-sweep` once `component-inventory` pins the version — a catalog row here
+would rot and duplicate the sweep's cohort list.

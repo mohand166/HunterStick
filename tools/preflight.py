@@ -2,6 +2,7 @@
 """Does this skill have what it needs? Resolve its declared inputs, then get out of the way.
 
     tools/preflight.py targets/acme http-probing
+    tools/preflight.py targets/acme application-mapping --host app.acme.com
     tools/preflight.py targets/acme --list          # every skill, one line each
 
 What this is
@@ -113,7 +114,20 @@ def declared_inputs(text):
             for role, (path, required) in out.items()]
 
 
-def check(tdir, sf, provided=()):
+def dynamic_input(tdir, role, marker, host):
+    """Resolve a subject-bound role and report whether it contains usable knowledge."""
+    producer = roles.load().get(role, (None, "unknown"))[1]
+    path, state = roles.resolve_path(tdir, role, host)
+    if path is None:
+        return (role, marker, state, producer), False
+    try:
+        relative = str(path.relative_to(tdir)) + "/"
+    except ValueError:
+        relative = str(path)
+    return (role, relative, state or "missing", producer), state == "populated"
+
+
+def check(tdir, sf, provided=(), host=None):
     """(present, missing_required, missing_optional, prompt_needed) — each a list of display rows.
 
     `provided` is the set of @hunter.* roles the caller confirmed with --provided. A prompt-subject
@@ -124,6 +138,8 @@ def check(tdir, sf, provided=()):
     text = sf.read_text(encoding="utf-8-sig", errors="replace")
     present, missing_req, missing_opt, prompt_needed = [], [], [], []
     provided = set(provided)
+    if host:
+        provided.add("@hunter.host")
     decl = declared_inputs(text)
     grouped = [d for d in decl if d[3]]
     group_satisfied = False
@@ -132,7 +148,8 @@ def check(tdir, sf, provided=()):
             # The subject comes from the invocation, not the brain. Declaring it is what stops a
             # skill whose subject is a pasted request from reporting "ready" with nothing pasted.
             if role in provided:
-                present.append((role, None, "supplied by you (--provided)", "the hunter"))
+                source = "--host" if role == "@hunter.host" and host else "--provided"
+                present.append((role, None, f"supplied by you ({source})", "the hunter"))
                 if in_group:
                     group_satisfied = True
             else:
@@ -146,6 +163,19 @@ def check(tdir, sf, provided=()):
             continue
         if rel is None:
             missing_req.append((role, None, roles.unknown(role), None))
+            continue
+        if roles.is_dynamic_path(rel):
+            row, ok = dynamic_input(tdir, role, rel, host)
+            if ok and in_group:
+                group_satisfied = True
+            if ok:
+                present.append(row)
+            elif in_group:
+                missing_opt.append(row)
+            elif required:
+                missing_req.append(row)
+            else:
+                missing_opt.append(row)
             continue
         p = tdir / rel
         if rel.endswith("/"):
@@ -194,6 +224,9 @@ def main():
                     help="confirm a prompt-supplied input was actually given, e.g. "
                          "--provided @hunter.class. Repeatable. Without it, a prompt-subject "
                          "skill reports PROMPT-CHECK REQUIRED rather than 'Ready to run'.")
+    ap.add_argument("--host", metavar="URL_OR_HOST",
+                    help="exact application selector. It supplies @hunter.host and resolves "
+                         "@app.current to only that application's brain.")
     # Accepted and ignored: older callers pass these. They are no longer gates.
     ap.add_argument("--selector", help=argparse.SUPPRESS)
     ap.add_argument("--budget", help=argparse.SUPPRESS)
@@ -231,7 +264,8 @@ def main():
         return 0
 
     sf = skill_file(args.skill)
-    present, missing_req, missing_opt, prompt_needed = check(tdir, sf, provided=args.provided)
+    present, missing_req, missing_opt, prompt_needed = check(
+        tdir, sf, provided=args.provided, host=args.host)
     stem = re.sub(r"^\d+-", "", sf.stem)
 
     print(f"\n# inputs — {tdir.name} · {stem}\n")

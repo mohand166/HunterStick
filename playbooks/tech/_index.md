@@ -16,6 +16,7 @@ match the observed stack. Never preload the whole directory.
 | the product is unknown, forked or proprietary | `_analysis.md` + [`live-research.md`](references/live-research.md) |
 | several technologies compose one app | one row per layer; load every relevant family, then analyze the seams |
 | a versioned package/component is present | this skill for reachability + `research-component` for current advisories |
+| the hunter asked to **actively probe** the stack's known misconfigs | that profile's `## Checks` catalog via the `component-hunt` skill — analysis files record hypotheses; only that skill sends the catalog's requests |
 
 The profiles are **seeds, not limits**. Target behavior and current official documentation outrank
 them. A missing deep profile is not a blind spot because every product routes through a family lens

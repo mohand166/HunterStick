@@ -36,7 +36,8 @@ method** — this skill degrades, it does not fail:
 - `@endpoints` (from `api-discovery`) — operations, methods, body shapes; an OpenAPI or GraphQL
   schema is the single richest input this skill can get.
 - `@tech` (from `technology-fingerprinting`) and `@components` — stack and versions.
-- `@appmap` (from `application-mapping`) — roles, flows, boundaries. The only source for several
+- `@app.current` (from `application-mapping`) — roles, flows and boundaries for the exact selected
+  host. The only source for several
   properties that nothing else can observe.
 
 Nothing at all → say so and name `http-probing` as the cheapest producer.

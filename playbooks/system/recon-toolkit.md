@@ -35,7 +35,10 @@
 (8.8.8.8, 1.1.1.1) for final validation; `dnsvalidator` to build your own if brute-forcing at scale.
 **API keys that most improve passive coverage** (subfinder/amass config): SecurityTrails,
 Censys, Shodan, VirusTotal, GitHub tokens, Chaos (high value); Netlas, FullHunt,
-BinaryEdge, FOFA, IntelX (also good).
+BinaryEdge, FOFA, IntelX (also good). **This is a generic list of what helps, not a claim any of
+them are configured** — SecurityTrails and Censys are both paid and neither is keyed in this
+project as of writing; run `tools/config.py check` before relying on a named source instead of
+assuming it from this table.
 
 ## Host analysis
 

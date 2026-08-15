@@ -31,6 +31,7 @@ REQUIRED_PATHS = (
     "targets/_template/scope.md",
     "targets/_template/scope-evidence.md",
     "targets/_template/accounts.md",
+    "targets/_template/progress.md",
     "playbooks/system/phase-routing.md",
     "skills/setup/init-target.md",
 )

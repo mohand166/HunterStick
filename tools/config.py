@@ -35,8 +35,10 @@ EXAMPLE = ROOT / "config.example.json"
 ENV_PREFIX = "BBW_"
 
 # Dotted paths whose value is a credential. `check` shows SET/unset for these and nothing else.
+# notify.channels carries webhook URLs — a Discord/Slack webhook URL *is* a bearer credential.
 SECRET_RE = re.compile(
-    r"(^api_keys\.)|(token$)|(secret$)|(\.key$)|(^api_keys\.github$)", re.I)
+    r"(^api_keys\.)|(token$)|(secret$)|(\.key$)|(^api_keys\.github$)|(^notify\.channels$)",
+    re.I)
 
 # Dotted paths whose value must never reach the model's context — shown as SET/unset only by
 # `check`, refused by `get`, excluded from `env`. Two reasons:

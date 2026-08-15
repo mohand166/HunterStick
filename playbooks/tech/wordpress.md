@@ -87,3 +87,23 @@ REST indexes, XML-RPC, login pages, published authors and predictable media URLs
 surface facts. Do not brute-force users or credentials. Stop an extension advisory path when the
 slug, active version, affected feature or route reachability remains unproved. A cache/WAF response
 may fingerprint an old deployment; preserve the conflict instead of choosing the exciting version.
+
+## 10 · Checks — the `component-hunt` catalog
+
+> Executed by `skills/vulnerability-testing/component-hunt.md` on a hunter-named host whose
+> fingerprint matches this profile. One request per check, read-only. Behavioral abuse
+> (XML-RPC methods, plugin CVEs) is deliberately not probed here — presence is recorded, the
+> abuse is a `vuln-hunt`/`n-day-sweep` decision.
+
+| check | precondition | probe | a hit is | safety | on hit → class | fix_locus |
+|---|---|---|---|---|---|---|
+| REST user listing | WordPress fingerprint (§2) | `GET /wp-json/wp/v2/users` | JSON array of objects with `slug` fields — 401/403/redirect is *restricted*, record that | read | `user-enumeration`; slugs feed credential worklists | REST filter on sensitive controller fields |
+| REST namespaces | WordPress fingerprint | `GET /wp-json/` | JSON with non-default `namespaces` — custom plugin APIs | read | surface fact → `@endpoints`/`@components` | — (recon, not a finding) |
+| core version file | WordPress fingerprint | `GET /readme.html` | WordPress-branded readme naming the version | read | version → `@components` (feeds cohort + tech-watch) | informational; not a report |
+| debug log | `WP_DEBUG` suspected (verbose errors seen) | `GET /wp-content/debug.log` | non-HTML text with PHP notices/warnings/deprecations | read | `origin-exposure` (paths, queries, sometimes keys) | `WP_DEBUG` display/log config |
+| XML-RPC presence | WordPress fingerprint | `GET /xmlrpc.php` | XML-RPC fault or method-list response (not the theme 404) | read | presence only → hypothesis for `ssrf` (pingback) / `limit-bypass` (multicall) — both need ACT-mode confirmation | `XMLRPC`/`.htaccess` restrictions |
+| plugin inventory | WordPress fingerprint | `GET /wp-content/plugins/<slug>/readme.txt` for slugs already evidenced (bundles, page source) — never brute-forced | stable-tag + plugin name/version | read | versions → `@components` → n-day cohort | — (recon) |
+| login surface | WordPress fingerprint | `GET /wp-login.php` | 200 login form | read | surface fact → `login` class entrypoint | — (recon) |
+
+Do not extend this table with brute-forced plugin slugs or theme guesses; that is
+content-discovery's discipline, not this catalog's.

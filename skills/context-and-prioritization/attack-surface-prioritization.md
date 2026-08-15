@@ -35,9 +35,13 @@ Rank by **greenfield-ness — how few people have seen this** — not by how muc
 - `@scope` — what is in scope and what the program forbids. **Never rank on bounty**: payment is
   program policy and says nothing about whether a technique is applicable here.
 - `@target` and `@tech` (optional) — architecture, acquisitions, stack identity with versions.
-- `@appmap` (optional, from `application-mapping`) — roles, tenancy and flows; the only source for
+- `@app.current` (optional, from `application-mapping`) — roles, tenancy and flows for the exact
+  selected host; the only source for
   the dimensions that most often decide rank.
 - `@tested` (optional, from `vuln-hunt`) — so a resolved cell is not ranked back to the top.
+- `lessons.md` (optional, workspace root, from the **hunter**) — cross-target lessons they
+  promoted deliberately. Advisory weight only: a lesson adjusts a rank's argument, it never
+  overrides what this target's own artifacts witnessed. Absent file = no cost.
 
 ## Signals — what to come back with
 
@@ -84,7 +88,7 @@ Rank by **greenfield-ness — how few people have seen this** — not by how muc
 - **"Sequential IDs mean IDOR" and "`/api/admin/*` returning 200 means BFLA" are not ranking
   inputs.** OWASP frames the flaw as the missing check and explicitly warns against inferring
   privilege from a URL path. The real predictor is *an identifier in the request plus the object
-  being reachable by a second principal* — which needs `@appmap`, not a path.
+  being reachable by a second principal* — which needs `@app.current`, not a path.
 - **The parameter-family-to-payout mapping is unsupported.** Measured against 357 disclosed reports,
   only the redirect family survives, and even it converts to XSS about 1.75× more often than to
   open redirect; the `cmd`/`exec`/`debug` family produced **zero** RCE and the `xml`/`data` family

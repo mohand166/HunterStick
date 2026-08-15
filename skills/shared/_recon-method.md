@@ -51,6 +51,26 @@ not type the attribution header — it is injected. Non-HTTP recon (dnsx, naabu,
 
 ---
 
+## A default sweep is a floor, not the finish
+
+Running the obvious tool with its default flags finds what every other hunter's obvious tool with
+default flags already found. That is not this project's bar — the objective is the asset nobody
+else's pipeline surfaced. Where a skill file names a technique that goes past the default sweep —
+an active probe instead of a passive source, a wordlist built from *this* target instead of a
+generic one, a DNS state most pipelines discard — running it is part of finishing the skill, not an
+optional enrichment you skip because the default tool already returned a result.
+
+**Enforce this the way every other bound in this method is enforced: through the skill's own exit
+criteria and the "no silent caps" rule, not through willpower.** A skill is not done because a tool
+exited 0. If its exit criteria name a technique and the run did not do it, either do it or say, in
+one sentence, why it does not apply to this target — no TLS on any resolved address, no shared IP to
+vhost-fuzz, no company vocabulary yet to derive a wordlist from. A skipped-and-unstated technique is
+the same failure as a skipped-and-unstated selector bound: it reads as complete and is not.
+
+This cuts both ways. A technique that does not apply here is not run for its own sake — permutation-
+fuzzing a target with no wildcard risk and a five-host estate is wasted budget, not thoroughness.
+The requirement is that the *decision* is visible, not that every technique fires on every target.
+
 ## Inputs are the only precondition
 
 A skill declares its inputs. That declaration is the *whole* gate:
@@ -84,6 +104,18 @@ proceed; do not silently treat "everything" as the default either.
 The bound is not the problem. An unreported bound is. A run that covered 5,993 of 35,426 hosts and
 says so is good work; the same run reported as "the estate" is a false claim of coverage that
 every later decision inherits.
+
+**Fuzzing and brute force are the one exception to "do not ask permission to proceed."** Everything
+above assumes ordinary-volume recon — resolving names, reading a passive source, probing a host
+once. Anything that sends a wordlist at the target — vhost fuzzing, DNS permutation, content
+discovery, brute-forced parameters or paths — is categorically louder, more likely to trip a WAF or
+rate limit, and closer to a line the scope statement may have drawn on purpose. A narrow request
+("run subdomain enum on acme.com") does not imply consent to it. `first-look` is quiet by design and
+does not fuzz; `dead-end-host` says it in five words: *"never let this phase start implicitly."*
+Follow the same rule in any skill: **name it and offer it — the IP(s), the wordlist, the rough
+request volume — do not run it**, unless the hunter's own words asked for that technique by name or
+a flow they already authorised bundles it. A skill's exit criteria are satisfied by the offer being
+stated, not by the traffic having been sent.
 
 ---
 

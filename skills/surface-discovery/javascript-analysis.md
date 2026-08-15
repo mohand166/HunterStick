@@ -26,7 +26,8 @@ down as a finding.
 
 - `@raw.http` (optional, from `http-probing`) — already-captured responses and script sources. Mine
   these before re-fetching anything; a second fetch of an estate is traffic you already spent.
-- `@appmap` (optional, from `application-mapping`) — the UI-reachable route set. This is the other
+- `@app.current` (optional, from `application-mapping`) — the UI-reachable route set for the exact
+  host selected by `@hunter.host`. This is the other
   half of the route delta and the reason signal 1 is a deliverable rather than a list.
 - `@urls` (optional, from `url-collection`) — historical `.js` the site no longer references. The
   archive keeps bundles the application dropped, and old bundles declare routes that still route.

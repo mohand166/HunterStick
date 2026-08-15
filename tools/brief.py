@@ -3,6 +3,7 @@
 
     tools/brief.py                 # every target: phase, blockers, what is missing
     tools/brief.py <target>        # one target in detail
+    tools/brief.py <target> --host https://app.example.com  # + that app's exact brain
     tools/brief.py --rules         # + AGENTS.md verbatim, for a cold runtime
 
 Why this exists: on Claude Code, AGENTS.md auto-loads. Everywhere else the first message is cold,
@@ -24,6 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skilllib  # noqa: E402
+import applib    # noqa: E402
 from scopelib import parse_scope                                  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -227,7 +229,25 @@ def line_one(name):
         print(f"  {'':<14} ⚠ {len(b)} blocker(s): {b[0][:70]}")
 
 
-def detail(name):
+def application_context(target, host):
+    """Return display lines and the exact app files for one invocation subject."""
+    if not host:
+        return [], []
+    try:
+        resolution = applib.resolve(target, host)
+    except ValueError as error:
+        return [f"invalid selector — {error}"], []
+    if resolution.path:
+        relative = resolution.path.relative_to(target)
+        lines = [f"{resolution.subject.display} -> {relative}/ ({resolution.state})"]
+        return lines, [str(path.relative_to(target)) for path in resolution.files()]
+    if resolution.candidates:
+        names = ", ".join(path.name for path in resolution.candidates)
+        return [f"{resolution.subject.display} is ambiguous ({names}); supply a port"], []
+    return [f"{resolution.subject.display} -> no app brain yet (run application-mapping)"], []
+
+
+def detail(name, host=None):
     t = TARGETS / name
     idx = read(t / "index.md")
     print(f"\n## {name}")
@@ -237,6 +257,9 @@ def detail(name):
         if v:
             print(f"   {lbl+':':<16} {v}")
     print(f"   {'Accounts:':<16} {accounts_state(t)}")
+    app_lines, _app_files = application_context(t, host)
+    for i, line in enumerate(app_lines):
+        print(f"   {('Application:' if i == 0 else ''):<16} {line}")
 
     # Use the ONE parser. This used to regex the verbatim-statement section instead, so a target
     # whose statement was a company name ("Example Corp.") reported "prose only" while every
@@ -270,7 +293,7 @@ def detail(name):
 
 
 
-def resume(name):
+def resume(name, host=None):
     """Reconstruct a session from the files — never from chat history.
 
     Chat history is the wrong source: it holds abandoned reasoning, target-controlled text and
@@ -390,12 +413,31 @@ def resume(name):
     except Exception:
         pass
 
+    # ---- cross-target lessons: global, promoted by the hunter, read at orient -----------------
+    lessons = ROOT / "lessons.md"
+    if lessons.exists():
+        lrows = [l for l in lessons.read_text(encoding="utf-8-sig").splitlines()
+                 if l.startswith("| ") and not l.startswith("| #")
+                 and not l.startswith("|---") and not l.startswith("| <")]
+        if lrows:
+            print(f"\n## Cross-target lessons   {len(lrows)} promoted — read lessons.md at orient")
+            if len(lrows) > 50:
+                print("   ⚠ over the 50-row cap — prune it; a lessons file nobody reads protects nothing")
+
     print(f"\n## Coverage")
     print(f"   {accounts_state(t)}")
     print("   run `tools/coverage.py targets/%s` for untested cells" % name)
+    if (t / "progress.md").exists():
+        print("   human activity view: progress.md — regenerate with "
+              f"`tools/progress.py targets/{name}`")
+    else:
+        print("   human activity view: progress.md missing — generate with "
+              f"`tools/progress.py targets/{name}`")
 
     # ---- the read set --------------------------------------------------------
     need = ["scope.md", "index.md"]
+    if (t / "progress.md").exists():
+        need.append("progress.md")
     if openr or partial:
         r = (openr + partial)[0]
         slug, path = resume_skill(r.get("phase"))
@@ -408,6 +450,12 @@ def resume(name):
             need.append(r["output_ptr"])
     if openh:
         need.append("hypotheses.md")
+    app_lines, app_files = application_context(t, host)
+    if app_lines:
+        print("\n## Application selection")
+        for line in app_lines:
+            print(f"  {line}")
+        need.extend(app_files)
     print("\n## Load these — and nothing else yet")
     for n in need:
         print(f"  {n}")
@@ -457,7 +505,14 @@ def main():
                     help="reconstruct a session from the files: unfinished work, standing "
                          "decisions, stale inputs, and the exact read set")
     ap.add_argument("--rules", action="store_true", help="also print the rules and router")
+    ap.add_argument("--host", metavar="URL_OR_HOST",
+                    help="resolve one exact application and include only its app brain in the read set")
     args = ap.parse_args()
+
+    if args.host and not args.target:
+        print("FAIL — --host needs a named target; there is no active target to inherit.",
+              file=sys.stderr)
+        return 2
 
     names = target_names()
     print("# session brief")
@@ -485,8 +540,8 @@ def main():
             print(f"\nFAIL — no target '{args.target}'. Known: {', '.join(names)}", file=sys.stderr)
             return 2
         if args.resume:
-            return resume(args.target)
-        detail(args.target)
+            return resume(args.target, host=args.host)
+        detail(args.target, host=args.host)
     else:
         print(f"\n## targets ({len(names)}) — no 'active' one; name the target you mean")
         for n in names:
