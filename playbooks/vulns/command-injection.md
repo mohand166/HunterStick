@@ -4,8 +4,22 @@
 > the chain that reaches RCE on the app or worker host. Model the data flow to the **shell/exec
 > sink**, work out how the app builds the command line around your input (argv array vs shell
 > string) and which metacharacters a shell would actually interpret, then break that assumption with
-> one harmless signal. Reason — don't run `id; whoami` to see what sticks. Thin class file; work it
-> with `playbooks/vulns/_master-vuln-hunting.md`.
+> one harmless signal. Reason — don't run `id; whoami` to see what sticks. Work this with
+> `playbooks/vulns/_master-vuln-hunting.md`.
+
+**Read this file every time.** The technique catalogue lives in **`ref/command-injection.md`** —
+open a section only when its trigger fires:
+
+| you observe | open `ref/command-injection.md` § |
+|---|---|
+| You're hunting for which real binary/interpreter the feature invokes | **C1** the real sink |
+| A filter or escaper stands in the way | **C2** filters and escapers that failed |
+| No shell metacharacter gets through at all | **C3** argument/flag injection |
+| Blind — you need a proof-shape | **C4** blind execution proof-shapes |
+| Deciding how far to push a live confirmation | **C5** confirming safely |
+| A lesser bug (upload, path traversal, deserialization, XSS) sits nearby | **C6** chains to command execution |
+| Judging duplication or picking the next move | **C7** corroboration, dedup, corpus limits |
+| Designing the confirmation from scratch | **C8** worked examples |
 
 ## 1. Model the flow before you touch anything
 

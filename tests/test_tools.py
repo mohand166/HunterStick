@@ -4,6 +4,7 @@ import importlib.util
 import os
 import pathlib
 import re
+import shutil
 import sys
 import tempfile
 import unittest
@@ -5101,3 +5102,94 @@ class MethodologyCoverageTests(unittest.TestCase):
         missing = sorted(p.stem for p in skill_files() if p.stem not in text)
         self.assertEqual([], missing,
                          f"skills the hunter cannot discover from METHODOLOGY.md: {missing}")
+
+
+class DashboardSpaTests(unittest.TestCase):
+    """The workspace SPA: sidebar of targets, per-target views, and the sections a hunter
+    actually opens the page for — what is running, what has been run, progress."""
+
+    @staticmethod
+    def _brain(root, name, runs=""):
+        d = Path(root) / name
+        (d / "recon").mkdir(parents=True)
+        (d / "index.md").write_text(f"# {name}\n- **Last updated:** 2026-01-01\n")
+        (d / "scope.md").write_text("# scope\n## In scope\n- `*.x.com`\n")
+        if runs:
+            (d / "runs.tsv").write_text(runs)
+        return d
+
+    def test_spa_has_sidebar_views_unique_ids_and_sections(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            page = dash.render_spa([self._brain(tmp, "alpha"), self._brain(tmp, "beta")])
+            self.assertEqual(page.count('class="titem"'), 2)
+            self.assertEqual(page.count('class="tview"'), 2)
+            ids = re.findall(r'id="([^"]+)"', page)
+            self.assertEqual(len(ids), len(set(ids)),
+                             "duplicate element ids break the SPA's JS")
+            for heading in ("What is running", "What has been run", "Attack surface",
+                            "Progress", "Where we stand", "Brain files"):
+                self.assertIn(heading, page)
+            self.assertIn("hashchange", page)          # no-reload routing is wired
+
+    def test_spa_renders_one_global_search_not_one_per_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            page = dash.render_spa([self._brain(tmp, "alpha"), self._brain(tmp, "beta")])
+            self.assertEqual(page.count('id="q"'), 1,
+                             "the SPA provides ONE search box for the active target")
+
+    def test_embedded_javascript_is_syntactically_valid(self):
+        """A Python string-escaping mistake in the JS template is invisible to every other test
+        here — they all assert on HTML structure, never on whether the script tags actually
+        parse. One malformed regex (`/^#\\\\/, ''` instead of `/^#\\//, ''`) once shipped a
+        dashboard whose hash router threw on load and never rendered a single target — silently,
+        with the HTML looking complete. `node --check` catches that class of bug before a browser
+        ever has to."""
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node not on PATH — cannot syntax-check embedded JS")
+        with tempfile.TemporaryDirectory() as tmp:
+            page = dash.render_spa([self._brain(tmp, "alpha"), self._brain(tmp, "beta")])
+            scripts = re.findall(r"<script>(.*?)</script>", page, re.S)
+            self.assertGreaterEqual(len(scripts), 1, "expected at least the SPA router script")
+            for i, src in enumerate(scripts):
+                jsfile = Path(tmp) / f"script{i}.js"
+                jsfile.write_text(src, encoding="utf-8")
+                result = subprocess.run([node, "--check", str(jsfile)],
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0,
+                                 f"script #{i} has a JS syntax error:\n{result.stderr}\n"
+                                 f"--- source ---\n{src}")
+
+    def test_running_section_and_meta_separate_open_from_resume(self):
+        runs = ("run_id\tdate\tphase\tselector\tsources\tbudget\tstatus\tresult\toutput_ptr"
+                "\tlimitations\tresume_from\tscope_sha\n"
+                "R-001\t2026-01-01\trecon:x\t*.x.com\t\t\trunning\t\t\t\tstopped mid\t\ts1\n"
+                "R-002\t2026-01-02\thunt:c\tapp\t\t\tpartial\t\t\tneeds account\tR-002\t\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            d = self._brain(tmp, "alpha", runs=runs)
+            out = dash.running_section(d)
+            self.assertIn("R-001", out)
+            self.assertIn("R-002", out)
+            self.assertIn("RUNNING", out)
+            meta = dash.collect_meta(d)
+            self.assertEqual((meta["open_runs"], meta["resume_points"]), (1, 1))
+
+    def test_history_section_lists_runs(self):
+        rows = ["run_id\tdate\tphase\tselector\tsources\tbudget\tstatus\tresult\toutput_ptr"
+                "\tlimitations\tresume_from\tscope_sha"]
+        rows += [f"R-{i:03d}\t2026-01-01\tphase{i}\tsel\t\t\tcomplete-for-this-run\tok\t\t\t\t"
+                 for i in range(3)]
+        with tempfile.TemporaryDirectory() as tmp:
+            d = self._brain(tmp, "alpha", runs="\n".join(rows) + "\n")
+            out = dash.history_section(d)
+            self.assertIn("R-002", out)
+            self.assertIn("complete-for-this-run", out)
+
+    def test_md_to_html_renders_tables_lists_and_escapes(self):
+        md = ("# T\n\n| a | b |\n|---|---|\n| 1 | `x` |\n\n- item **b**\n\n"
+              "<script>alert(1)</script>\n")
+        out = dash.md_to_html(md)
+        self.assertIn("<table>", out)
+        self.assertIn("<code>x</code>", out)
+        self.assertIn("<ul>", out)
+        self.assertIn("&lt;script&gt;", out)          # escaped, never executed

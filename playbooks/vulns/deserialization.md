@@ -4,8 +4,20 @@
 > names — the chain that reaches RCE on the deserializing host. Model the request down to the
 > **deserialization call**: recognize the serialized blob crossing a trust boundary, work out which
 > deserializer consumes it and whether it's the unsafe API, then break that assumption. Prove it with
-> an out-of-band callback — reason, don't fire a live RCE gadget. Thin class file; work it with
+> an out-of-band callback — reason, don't fire a live RCE gadget. Work this with
 > `playbooks/vulns/_master-vuln-hunting.md`.
+
+**Read this file every time.** Per-ecosystem gadget detail lives in **`ref/deserialization.md`** —
+open a section only when its trigger fires:
+
+| you observe | open `ref/deserialization.md` § |
+|---|---|
+| You've placed the format/ecosystem and need the gadget shape | **D1** format + gadget, per ecosystem |
+| An upload or write primitive sits near an unrelated deserializer | **D2** the file-write-feeds-sink composite pattern |
+| You need a proof-shape that doesn't require firing a live gadget | **D3** how these were actually proven |
+| The same CVE/library shows up on more than one host | **D4** same CVE, three hosts, three reports |
+| A report reads too clean, or triage seems inconsistent | **D5** attribution and disposition traps |
+| Proving novelty, or picking the next move | **D6** novelty, dedup, hunting fixes |
 
 ## 1. Model the flow before you touch anything
 

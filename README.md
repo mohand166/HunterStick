@@ -209,6 +209,12 @@ flowchart TD
   host/IP, including the skill, tool, exact redacted command and options, wordlist/input hashes,
   result, and evidence pointer. Set-based commands remain explicitly unresolved instead of being
   guessed onto every host.
+- **A browsable dashboard** — `tools/dashboard.py --all` renders a gitignored `dashboard.html`: a
+  sidebar lists every target with status chips (open runs, resume points, staleness, probes,
+  surface); clicking one loads open runs, the runs ledger, attack surface, testing state, the
+  rendered `progress.md`, roots/DNS, and a brain-files age tab, hash-routed so refresh and back
+  stay put. `accounts.md` is summarized to usable-principal counts, never rendered, so credentials
+  stay out of every generated page.
 - **Evidence and dispositions** — request/response artifacts and the findings they support,
   including rejected cases so they are not rediscovered as new.
 

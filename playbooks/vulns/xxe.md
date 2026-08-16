@@ -8,6 +8,20 @@
 > reaches internal networks; the value is one clean proof of resolution, not a file dump. Work this
 > with `playbooks/vulns/_master-vuln-hunting.md`.
 
+**Read this file every time.** The technique catalogue lives in **`ref/xxe.md`** — open a section
+only when its trigger fires:
+
+| you observe | open `ref/xxe.md` § |
+|---|---|
+| An upload or type filter stands between you and the parser | **X1** bypassing the defense |
+| You're hunting for where the real XML parser is | **X2** finding the sink |
+| You need to know if output comes back in-band | **X3** in-band oracles |
+| Blind, and you need an OOB proof-shape | **X4** blind proof-shapes |
+| Confirmed — judging what impact was actually shown | **X5** confirmed-impact escalation |
+| A report reads too clean | **X6** attribution and thinness traps |
+| Proving novelty, or picking the next move | **X7** novelty and hunting fixes |
+| Designing the confirmation from scratch | **X8** worked example |
+
 ---
 
 ## 1. Model the parser before you touch anything

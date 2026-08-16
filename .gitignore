@@ -41,3 +41,4 @@ __pycache__/
 tools/doctor.py
 .notify-spool.jsonl
 lessons.md
+dashboard.html

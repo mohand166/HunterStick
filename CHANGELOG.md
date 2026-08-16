@@ -67,6 +67,17 @@ first. Dates use `YYYY-MM-DD`; they describe repository changes, not target acti
   and always-rules sections. Every skill in the library is named so a hunter who wants X can
   find the skill that does it, and a new test enforces the file stays complete as skills are
   added.
+- **Workspace dashboard SPA.** `tools/dashboard.py --all` now builds a root `dashboard.html`
+  (gitignored): a sidebar lists every target with status chips (open runs, resume points,
+  staleness, probes, surface), clicking one loads its dashboard into the main area with no
+  reload (hash-routed, so refresh and back stay put). Each target view is restructured around
+  what a hunter opens the page for — where we stand, what is running (open runs, resume points,
+  tool failures), what has been run (the runs ledger), attack surface, testing state, the
+  rendered `progress.md`, roots/DNS, the computed data inventory, and a brain-files state/age
+  tab. One global search filters the active target's tables; the sidebar has its own target
+  filter. Single-target rendering is unchanged (`recon-review.html`), and `accounts.md` is
+  summarized — usable principals — never rendered, so credential references stay out of every
+  generated page.
 - **Deeper asset discovery guidance.** Subdomain enumeration now includes direct certificate-SAN
   collection from known IPs, company-matched and target-derived wordlists, and explicit VHost
   discovery inputs and calibration. ASN analysis now distinguishes RDAP registration from

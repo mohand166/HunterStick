@@ -38,7 +38,7 @@ invocation and exit code to the target's tool log where a target is available.
 | import browsing traffic | “Import this Burp/HAR export.” | `import-http.py` |
 | recover lazy JavaScript | “Find every authorized lazy chunk in these bundles.” | `chunks.py` |
 | normalize JS/spec surface | “Reduce these saved jsluice URL/secret or OpenAPI artifacts into the brain.” | `surface.py` |
-| render a human review page | “Generate the target dashboard.” | `dashboard.py` |
+| render a human review page — one target, or the workspace SPA | “Generate the target dashboard.” / “Show me everything.” | `dashboard.py` |
 | watch for new assets | “Monitor subdomains every 12 hours.” | `monitor.py` |
 | pilot an n-day check | “Check this affected cohort.” | `sweep.py` |
 | audit failures | “What failed?” | `runlog.py` |
