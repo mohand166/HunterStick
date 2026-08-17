@@ -627,7 +627,8 @@ def cmd_patterns(args):
 # ---------------------------------------------------------------- runs
 
 RUN_COLS = ["run_id", "date", "phase", "selector", "sources", "budget",
-            "status", "result", "output_ptr", "limitations", "resume_from", "scope_sha"]
+            "status", "result", "output_ptr", "limitations", "resume_from", "scope_sha",
+            "model"]
 
 # `running` is the one that makes interruption visible. A run logged only on completion cannot
 # distinguish "never started" from "traffic was sent and the session died before normalizing" —
@@ -711,6 +712,30 @@ def render_progress(tdir):
                 f"run tools/progress.py {tdir} by hand")
 
 
+def _default_model():
+    """The model/tier stamped on a run when --model was not passed: config `runtime.model`,
+    env-overridable as BBW_RUNTIME_MODEL. Metadata, never a gate — unset stays empty ('—' in
+    displays), so a missing value degrades the audit, never the run."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import config
+        v = config.load().get("runtime.model")
+        return str(v).strip() if v else ""
+    except (SystemExit, Exception):                               # noqa: BLE001
+        return ""
+
+
+def _migrate_runs_header(f):
+    """Older brains predate the `model` column. Rewrite ONLY the header line so the whole file
+    shares one schema; short rows still parse (DictReader + `.get` reads them as model='')."""
+    text = f.read_text(encoding="utf-8-sig")
+    lines = text.splitlines()
+    if not lines or "model" in [c.strip() for c in lines[0].split("\t")]:
+        return
+    lines[0] = lines[0].rstrip("\n") + "\tmodel"
+    f.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def cmd_run(args):
     """Record one BOUNDED run. There is no such thing as a phase being globally done."""
     tdir = target_of(args.target)
@@ -733,7 +758,8 @@ def cmd_run(args):
                     "result": args.result or prior["result"],
                     "output_ptr": args.output or prior["output_ptr"],
                     "limitations": args.limitations or prior["limitations"],
-                    "resume_from": args.resume_from or ""})
+                    "resume_from": args.resume_from or "",
+                    "model": getattr(args, "model", "") or prior.get("model", "")})
     else:
         # Next id from the highest id ALREADY USED, not from the row count. A run writes one row
         # when it opens and another when it closes, so `len(existing) + 1` burned an id per
@@ -748,15 +774,19 @@ def cmd_run(args):
                "status": args.status, "result": args.result or "",
                "output_ptr": args.output or "", "limitations": args.limitations or "",
                "resume_from": args.resume_from or "",
-               "scope_sha": scope_sha(tdir)}
+               "scope_sha": scope_sha(tdir),
+               "model": getattr(args, "model", "") or _default_model()}
     f = tdir / RUNS
+    if f.exists():
+        _migrate_runs_header(f)
     new = not f.exists()
     with f.open("a", encoding="utf-8", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=RUN_COLS, delimiter="\t", lineterminator="\n")
         if new:
             w.writeheader()
         w.writerow(row)
-    print(f"  {rid}  {row['phase']}  selector={row['selector']}  [{args.status}]")
+    print(f"  {rid}  {row['phase']}  selector={row['selector']}  [{args.status}]"
+          + (f"  model={row['model']}" if row.get("model") else ""))
     # A run that is still `running` has changed nothing worth re-rendering; every terminal status
     # ends a phase and must leave the view current.
     if args.status != "running":
@@ -812,11 +842,20 @@ def cmd_runs(args):
         for r in by_phase[phase]:
             print(f"  {r['run_id']}  {r['date']}  {r['phase']}")
             print(f"          selector: {r['selector'] or '—'}   sources: {r['sources']}")
-            print(f"          {r['status']}" + (f" · {r['result']}" if r["result"] else ""))
+            print(f"          {r['status']}"
+                  + (f" · {r['model']}" if r.get("model") else "")
+                  + (f" · {r['result']}" if r["result"] else ""))
             if r["limitations"]:
                 print(f"          not covered: {r['limitations']}")
             if r["resume_from"]:
                 print(f"          resume from: {r['resume_from']}")
+    by_model = defaultdict(int)
+    for r in latest.values():
+        by_model[r.get("model") or "—"] += 1
+    if any(r.get("model") for r in latest.values()):
+        print("\n  by model: " + " · ".join(
+            f"{m} {n}" for m, n in sorted(by_model.items(), key=lambda kv: -kv[1]))
+            + "   (cheap tier does the volume, strong tier the judgment — measure, don't assume)")
     stale = [r for r in runs if age_of(r["date"]) is not None and age_of(r["date"]) > 14]
     if stale:
         print(f"\n  {len(stale)} run(s) older than 14 days. State the age before you rely on "
@@ -1058,6 +1097,10 @@ def main():
                          "'openapi.json downloaded; endpoint normalisation not started'")
     rn.add_argument("--finish", metavar="RUN_ID",
                     help="close an earlier `running` row instead of opening a new one")
+    rn.add_argument("--model", metavar="NAME",
+                    help="model/tier that ran this unit (e.g. deepseek-v4, glm). Default: "
+                         "config runtime.model / BBW_RUNTIME_MODEL. Metadata for the audit — "
+                         "'which tier found what' — never a gate.")
     rn.add_argument("--date")
     rn.set_defaults(fn=cmd_run)
 

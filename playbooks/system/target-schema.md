@@ -64,8 +64,10 @@ targets/<target>/
   user-flows.md         ← journeys through the app: steps, principals, objects and state changes
   clusters.md           ← backend clusters (host-correlation-and-clustering); attack-surface.md links to these
   runs.tsv              ← APPEND-ONLY record of BOUNDED runs: run_id · phase · selector ·
-                          sources · status · limitations. A phase is never globally done;
-                          a run completes for its selector. `tools/kb.py run|runs`.
+                          sources · status · limitations · model. A phase is never globally done;
+                          a run completes for its selector. `model` stamps which tier ran it
+                          (cheap recon volume vs strong-model judgment) — audit metadata, never
+                          a gate. `tools/kb.py run|runs`.
   observations.tsv      ← APPEND-ONLY ledger of everything the target ever showed you:
                           date · subject · predicate · object · confidence · source · evidence.
                           Facts a phase learns INCIDENTALLY go here, not into prose. Never

@@ -38,6 +38,8 @@ resolve the target  →  load the named skill  →  verify its required inputs
    gate" keeps admission simple; it does not tell you to bulldoze a runtime or privacy boundary.
 4. **Open the run, then loop.** Before traffic or a brain mutation:
    `tools/kb.py run targets/<t> --skill <name> --selector "<what it covers>" --status running`.
+   Add `--model <tier>` (or set `runtime.model` / `BBW_RUNTIME_MODEL`) so the ledger can answer
+   *which tier found what* — audit metadata for the hunter's model routing, never a gate.
    A run recorded only on completion cannot distinguish *never started* from *traffic sent,
    session died before normalising* — and those need opposite next actions. Close it however it
    ends, with `--limitations` saying what it did not cover.

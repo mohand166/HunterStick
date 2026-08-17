@@ -67,6 +67,12 @@ first. Dates use `YYYY-MM-DD`; they describe repository changes, not target acti
   and always-rules sections. Every skill in the library is named so a hunter who wants X can
   find the skill that does it, and a new test enforces the file stays complete as skills are
   added.
+- **Model-tier stamp on every run.** `runs.tsv` gains a `model` column: `kb.py run --model
+  <tier>` (or config `runtime.model`, env `BBW_RUNTIME_MODEL`) records which model ran each
+  unit, so the ledger, `progress.md`, and the dashboard's run history can answer *which tier
+  found what* from real data — the measurement under cheap-model-for-volume /
+  strong-model-for-judgment routing. Older brains migrate in place (header-only rewrite); an
+  unstamped run reads as `—`, never blocks, and closing a run preserves its stamp.
 - **Workspace dashboard SPA.** `tools/dashboard.py --all` now builds a root `dashboard.html`
   (gitignored): a sidebar lists every target with status chips (open runs, resume points,
   staleness, probes, surface), clicking one loads its dashboard into the main area with no

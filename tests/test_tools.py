@@ -1057,7 +1057,7 @@ class SessionContinuityTests(unittest.TestCase):
         import argparse
         a = dict(target=str(d), phase=None, selector=None, sources=None, budget=None,
                  status="running", result=None, output=None, limitations=None,
-                 resume_from=None, finish=None, date=None)
+                 resume_from=None, finish=None, date=None, model=None)
         a.update(kw)
         import io, contextlib
         with contextlib.redirect_stdout(io.StringIO()):
@@ -5193,3 +5193,67 @@ class DashboardSpaTests(unittest.TestCase):
         self.assertIn("<code>x</code>", out)
         self.assertIn("<ul>", out)
         self.assertIn("&lt;script&gt;", out)          # escaped, never executed
+
+
+class RunsModelTierTests(unittest.TestCase):
+    """The model/tier stamp on runs: audit metadata for cheap-vs-strong routing, never a gate.
+
+    An unstamped run must behave exactly as before ('—' in displays, empty in the ledger), an
+    old 12-column runs.tsv must migrate in place, and finishing a run must not lose the stamp.
+    """
+
+    def test_old_header_migrates_in_place_and_old_rows_read_as_unstamped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp) / "t"
+            d.mkdir()
+            (d / "index.md").write_text("# t\n")
+            (d / "runs.tsv").write_text(
+                "run_id\tdate\tphase\tselector\tsources\tbudget\tstatus\tresult\toutput_ptr"
+                "\tlimitations\tresume_from\tscope_sha\n"
+                "R-001\t2026-01-01\trecon:x\t*.old.com\tsf\t\tcomplete-for-this-run\tok\t\t\t\t\n")
+            kb._migrate_runs_header(d / "runs.tsv")
+            header = (d / "runs.tsv").read_text().splitlines()[0]
+            self.assertIn("model", header.split("\t"))
+            rows = kb.read_runs(d)
+            self.assertEqual(rows[0]["model"], "")     # short row, not an error
+
+    def test_migration_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            f = Path(tmp) / "runs.tsv"
+            f.write_text("\t".join(kb.RUN_COLS) + "\n")
+            kb._migrate_runs_header(f)
+            self.assertEqual(f.read_text().splitlines()[0].split("\t").count("model"), 1)
+
+    def test_run_stamps_model_and_finish_preserves_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp) / "t"
+            (d / "recon").mkdir(parents=True)
+            (d / "index.md").write_text("# t\n")
+            (d / "scope.md").write_text("# s\n")
+            (d / "runs.tsv").write_text("\t".join(kb.RUN_COLS) + "\n")
+            import argparse, io, contextlib
+            def run(**kw):
+                a = dict(target=str(d), phase=None, selector=None, sources=None, budget=None,
+                         status="running", result=None, output=None, limitations=None,
+                         resume_from=None, finish=None, date=None, model=None)
+                a.update(kw)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    return kb.cmd_run(argparse.Namespace(**a))
+            run(phase="recon:subdomain-enumeration", selector="*.acme.com",
+                model="deepseek-v4")
+            rows = kb.read_runs(d)
+            self.assertEqual(rows[-1]["model"], "deepseek-v4")
+            run(finish=rows[-1]["run_id"], status="complete-for-this-run")
+            self.assertEqual(kb.read_runs(d)[-1]["model"], "deepseek-v4",
+                             "closing a run must not lose its tier stamp")
+
+    def test_env_default_flows_through_config(self):
+        old = os.environ.get("BBW_RUNTIME_MODEL")
+        os.environ["BBW_RUNTIME_MODEL"] = "glm-test"
+        try:
+            self.assertEqual(kb._default_model(), "glm-test")
+        finally:
+            if old is None:
+                os.environ.pop("BBW_RUNTIME_MODEL", None)
+            else:
+                os.environ["BBW_RUNTIME_MODEL"] = old

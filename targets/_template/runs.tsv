@@ -1,1 +1,1 @@
-run_id	date	phase	selector	sources	budget	status	result	output_ptr	limitations	resume_from	scope_sha
+run_id	date	phase	selector	sources	budget	status	result	output_ptr	limitations	resume_from	scope_sha	model

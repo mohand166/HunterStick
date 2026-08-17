@@ -31,7 +31,8 @@ import runlog                                                   # noqa: E402
 
 
 RUN_COLUMNS = ["run_id", "date", "phase", "selector", "sources", "budget",
-               "status", "result", "output_ptr", "limitations", "resume_from", "scope_sha"]
+               "status", "result", "output_ptr", "limitations", "resume_from", "scope_sha",
+               "model"]
 DOMAIN = re.compile(r"(?<![A-Za-z0-9_-])(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,63}(?![A-Za-z0-9_-])")
 URL = re.compile(r"https?://[^\s'\"<>]+", re.I)
 TARGET_FLAGS = {"-u", "--url", "--host", "--target", "-target"}
@@ -221,7 +222,8 @@ def record_date(record):
 
 def scope_progress_rows(runs, records):
     counts = Counter(str(record.get("run_id") or "") for record in records)
-    return [[row["date"], row["run_id"], row["phase"], row["selector"],
+    return [[row["date"], row["run_id"], row.get("model") or "—", row["phase"],
+             row["selector"],
              row["sources"], row["budget"], row["status"],
              f"{row['result'] or '—'}" + (f" · {counts[row['run_id']]} command(s)"
                                           if counts[row["run_id"]] else ""),
@@ -324,7 +326,8 @@ def render(target):
         "",
         "## Scope-wide progress",
         "",
-        markdown_table(["date", "run", "skill / objective", "selector", "sources / tools",
+        markdown_table(["date", "run", "model", "skill / objective", "selector",
+                        "sources / tools",
                         "budget", "status", "result / command count", "limitations"],
                        scope_rows),
         "",

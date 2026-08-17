@@ -781,8 +781,8 @@ def history_section(tdir):
     if len(runs) > RUN_CAP:
         out.append(f'<div class="banner">Showing the newest {RUN_CAP} of {len(runs)} runs — '
                    '<code>tools/kb.py runs</code> for the full ledger.</div>')
-    out.append("<table><tr><th>run</th><th>date</th><th>objective</th><th>selector</th>"
-               "<th>status</th><th>result</th></tr>")
+    out.append("<table><tr><th>run</th><th>date</th><th>model</th><th>objective</th>"
+               "<th>selector</th><th>status</th><th>result</th></tr>")
     for r in shown:
         result = r.get("result") or ""
         if len(result) > 150:
@@ -790,6 +790,7 @@ def history_section(tdir):
         lim = r.get("limitations") or ""
         title = f' title="{e(lim[:300])}"' if lim else ""
         out.append(f"<tr><td><code>{e(r['run_id'])}</code></td><td>{e(r['date'])}</td>"
+                   f"<td>{e(r.get('model') or '—')}</td>"
                    f"<td>{md_inline(r['phase'])}</td><td>{md_inline(r['selector'])}</td>"
                    f"<td>{e(r['status'])}</td><td{title}>{md_inline(result)}</td></tr>")
     out.append("</table>")
