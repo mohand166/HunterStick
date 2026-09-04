@@ -3,7 +3,7 @@
 This file records user-visible HunterStick changes by the date they were added. Entries are newest
 first. Dates use `YYYY-MM-DD`; they describe repository changes, not target activity or releases.
 
-## 2026-09-03
+## 2026-09-04
 
 ### Changed
 
@@ -16,6 +16,43 @@ first. Dates use `YYYY-MM-DD`; they describe repository changes, not target acti
   `derive-properties`. Inside an authorized flow or runbook the sequence is already decided, so
   closing actions surface deviations only. All 15 statements of the duty across 13 files were
   aligned to the same wording.
+
+### Added
+
+- **Read-only VPS bridge in the console.** `tools/dashboard-server.py` can now query the VPS
+  live (AGENTS.md's "query the VPS whenever you need something from it"): the newest `raw/http`
+  httpx artifact is parsed remotely into a compact extract that fills status/title/tech gaps in
+  the Hosts tab (curated local observations always win), and a new **VPS raw** tab lists every
+  remote artifact (dir, file, size, date) plus pending monitor deltas from `monitor-pending.md`.
+  All remote access goes through `tools/config.py ssh`, is read-only, cached 60s (errors 8s), and
+  degrades to an explicit "VPS not configured" state — no SSH is attempted and no bulk is pulled
+  into the brain. Unit-tested without a VPS: the extract parser, the gap-fill merge (local-facts-
+  win precedence), and a round-trip proving the base64-shipped remote extractor emits exactly the
+  shape the local parser consumes. Bulk URLs are not auto-probed: the Endpoints tab names
+  `http-probing` on the urls artifact as the unit that fills them — a suggestion, never a
+  console-triggered run.
+
+## 2026-09-03
+
+### Added
+
+- **Live ASM-style console.** New `tools/dashboard-server.py` (stdlib-only, read-only, binds
+  127.0.0.1 by default) serving a JSON API recomputed from the brain files on every request, plus
+  the SPA in `web/`: fleet KPIs, run-activity chart, hypotheses donut, recon funnel with honest
+  `missing`/`on-VPS` states, target cards, and per-target dashboards — running tasks with a live
+  pulse, run ledger, ranked surface, backlog, tool logs, rendered `progress.md`, brain-file ages.
+  Auto-refreshes every 15s. `accounts.md` is summarized to principal counts and never serialized;
+  there is no generic file endpoint. Fixed a latent `dashboard.py` surface-table mismatch on the
+  way (the parenthesized `entrypoint (host/endpoint/param/flow)` header made real tables read as
+  0 rows) via a prefix-matching, most-rows-wins picker local to the server.
+- **Hosts inventory, endpoints tab, and per-host app dashboards.** The console's target view
+  gained a Hosts tab (live-hosts.txt merged with technologies.md and observations — status and
+  tech where the local brain records them, honestly `—` otherwise, chunked rendering with filter
+  for 3k+ lists) and an Endpoints tab (the curated endpoints.md slice plus urls/parameters bulk
+  states). Every host links to its own dashboard at `#/t/<target>/app/<host>`: the
+  `applications/<host[-port]>/` brain (map/endpoints/notes) where one exists, plus the host's
+  boundary-matched slice of runs, probes, surface, hypotheses, observations and progress — with
+  the honest "no app brain yet — application-mapping creates it" state otherwise.
 
 ## 2026-08-15
 

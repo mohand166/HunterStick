@@ -215,7 +215,15 @@ flowchart TD
   surface); clicking one loads open runs, the runs ledger, attack surface, testing state, the
   rendered `progress.md`, roots/DNS, and a brain-files age tab, hash-routed so refresh and back
   stay put. `accounts.md` is summarized to usable-principal counts, never rendered, so credentials
-  stay out of every generated page.
+  stay out of every generated page. For a live view instead of a snapshot, run the Python
+  dashboard app — `python3 tools/dashboard-server.py` and open `http://127.0.0.1:8787`
+  (`--port N` for another port). It is stdlib-only, read-only, and binds localhost; it serves an
+  ASM-style SPA (`web/`) — fleet KPIs, activity charts, the recon funnel, per-target
+  dashboards with running tasks, run ledger, live-hosts inventory (status/technology where the
+  brain records them), notable endpoints, attack surface, backlog, logs and progress, and
+  per-host app dashboards (`#/t/<target>/app/<host>`) that render the application brain beside
+  that host's slice of runs, probes and hypotheses —
+  recomputed on every request and auto-refreshing while the tab is open.
 - **Evidence and dispositions** — request/response artifacts and the findings they support,
   including rejected cases so they are not rediscovered as new.
 

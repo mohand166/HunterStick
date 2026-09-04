@@ -50,6 +50,19 @@ file. For an exactly named skill even that is skipped: you were told what to run
 | `.mcp.json` | Wires two MCP servers: `chrome` (Playwright, for rendering SPAs and reading the DOM) and `burp` (SSE on `127.0.0.1:9876`, for proxy history). | Read by the runtime at startup, not by the model |
 | `FILEMAP.md` | This file. | **HUMAN** |
 
+## `web/` — the live console frontend
+
+Static assets served by `tools/dashboard-server.py`; never loaded by the model, never built, no
+external assets or CDNs (works fully offline). Untrusted brain strings are placed with
+`textContent`, never string-concatenated into HTML — the one `innerHTML` consumer renders
+`progress.md` as backend-escaped HTML.
+
+| file | what it is | when |
+|---|---|---|
+| `web/index.html` | SPA shell: noscript fallback, inline SVG favicon, stylesheet and script includes. | **HUMAN** (served by `dashboard-server.py`) |
+| `web/style.css` | The design system — dark-first tokens with a light variant, cards/KPIs/chips/tables/tabs, pulse and skeleton animations, responsive collapse under 940px. | **HUMAN** (served) |
+| `web/app.js` | The SPA: hash router (`#/`, `#/t/<name>/<tab>`), fetch layer, SVG charts (activity bars, donut, sparklines), sortable/filterable tables, 15s auto-refresh that preserves scroll and filter, `/` to focus search. | **HUMAN** (served) |
+
 ---
 
 ## `skills/` — the bodies · `.claude/skills/` — the pointers
@@ -142,6 +155,7 @@ that send traffic or change the brain append their exit code to `targets/<t>/log
 | `suggest-flows.py` | Computes which flow applies from the brain's own numbers — and, with `--why`, states what it *cannot* determine. Never guesses. | **EXEC** — when the next move is unclear |
 | `import-http.py` | Turns captured traffic (HAR, Burp XML, Burp sitemap) into structured endpoints in the brain. Refuses out-of-scope hosts rather than importing them. | **EXEC** — after a browsing/proxy session |
 | `dashboard.py` | Renders the brains as self-contained HTML — one target (`recon-review.html`) or, with `--all`, the workspace SPA: a root `dashboard.html` with a sidebar of every target, hash-routed (no reload), each view answering where-we-stand / what-is-running / what-has-run / attack surface / progress / brain files. Counts computed from the files, drift flagged, `missing` distinguished from `0`; `accounts.md` summarized, never rendered. | **EXEC** — on request; the root `dashboard.html` is generated and gitignored |
+| `dashboard-server.py` | Serves the live read-only console: a JSON API over the same parsers `dashboard.py` uses, plus the SPA in `web/` — fleet KPIs, activity chart, funnel, per-target tabs (runs with live open-run pulse, surface, backlog, logs, progress, brain files, a **Hosts** inventory merging live-hosts.txt with technologies.md and observations, and an **Endpoints** tab), plus **per-host app dashboards** at `#/t/<target>/app/<host>` rendering the `applications/<host[-port]>/` brain beside that host's slice of runs, probes, surface, hypotheses and observations. Auto-refreshing every 15s; chunked tables for 3k+ host lists. **Read-only VPS bridge**: with `vps.*` configured, the newest `raw/http` httpx artifact is parsed *on the VPS* (base64-shipped extractor) into a compact extract that fills status/title/tech gaps in the Hosts tab — local observations always win; a **VPS raw** tab lists the remote artifacts and pending monitor deltas (`monitor-pending.md`). Everything remote is fetched over SSH via `tools/config.py ssh`, cached 60s, never written; `config.json` is never opened directly and `accounts.md` is summarized to principal counts, never serialized; no generic file endpoint exists. | **EXEC** — on request (`--port N`); the hunter's always-on console at `http://127.0.0.1:8787` |
 | `monitor.py` | Installs, inspects and removes the VPS cron job for scheduled enumeration. `pending` shows what a scheduled run found that nobody has reviewed. | **EXEC** — on "monitor subdomains for X" |
 | `sweep.py` | Runs one n-day check across a tech cohort selected by `kb.py cohort`. **Pilot-gated**: one host first, full output shown, before anything scales. | **EXEC** — when a public n-day lands |
 | `vps-sync.py` | Enforces the local/VPS split — brain local, raw output remote — and moves files across it. `demote` pushes bulk back off the laptop. | **EXEC** — around remote phases |

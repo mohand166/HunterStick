@@ -5257,3 +5257,94 @@ class RunsModelTierTests(unittest.TestCase):
                 os.environ.pop("BBW_RUNTIME_MODEL", None)
             else:
                 os.environ["BBW_RUNTIME_MODEL"] = old
+
+
+class ConsoleVpsBridgeTests(unittest.TestCase):
+    """The read-only VPS bridge in dashboard-server.py: the remote-extract parser and
+    the enrichment merge. The SSH layer itself is thin on purpose and not exercised
+    here (tests must not depend on a configured VPS)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import base64, contextlib, io
+        cls._b64 = base64
+        with contextlib.redirect_stdout(io.StringIO()):
+            cls.dsrv = load_tool("dashboard-server")
+
+    def test_parse_extract_lines_normalizes_and_skips_garbage(self):
+        lines = [
+            '{"host": "API.Example.com", "url": "https://api.example.com", "status": 200,'
+            ' "title": "Example API", "tech": "nginx | PHP"}',
+            '{"host": "gated.example.com", "url": "https://gated.example.com", "status": 403,'
+            ' "title": "", "tech": ""}',
+            "not json at all",
+            '{"host": "nostatus.example.com", "url": "https://nostatus.example.com", "status": null}',
+            "",
+        ]
+        out = self.dsrv.parse_extract_lines(lines)
+        self.assertEqual(set(out), {"api.example.com", "gated.example.com"},
+                         "garbage lines and status-less rows must be skipped, hosts normalized")
+        self.assertEqual(out["api.example.com"]["status"], "200")
+        self.assertEqual(out["api.example.com"]["tech"], "nginx | PHP")
+        self.assertIsNone(out["gated.example.com"]["title"])
+
+    def test_merge_fills_gaps_but_local_facts_win(self):
+        hosts = [
+            {"host": "a.example.com", "status": "200 (Directory: / listing)", "title": None, "tech": "Jetty 9.4.57"},   # local status+tech
+            {"host": "b.example.com", "status": None, "title": None, "tech": None},                                      # fully VPS-filled
+            {"host": "c.example.com", "status": None, "title": None, "tech": None},                                      # not in artifact
+        ]
+        mapping = {
+            "a.example.com": {"status": "200", "title": "from vps", "tech": "nginx"},
+            "b.example.com": {"status": "401", "title": "VPS page title", "tech": "ATS"},
+        }
+        n = self.dsrv.merge_enrichment(hosts, mapping)
+        self.assertEqual(n, 2)
+        self.assertEqual(hosts[0]["status"], "200 (Directory: / listing)",
+                         "a curated local observation must never be overridden by the artifact")
+        self.assertEqual(hosts[0]["title"], "from vps")   # a gap still fills from the artifact
+        self.assertEqual(hosts[1]["status"], "401")
+        self.assertEqual(hosts[1]["tech"], "ATS")
+        self.assertEqual(hosts[2]["status"], None)
+
+    def test_hosts_payload_with_injected_enrichment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = pathlib.Path(tmp)
+            (d / "index.md").write_text("# t\n")
+            (d / "recon").mkdir()
+            (d / "recon/live-hosts.txt").write_text("http://a.example.com\nhttp://b.example.com\n")
+            out = self.dsrv.hosts_payload(d, enrich={
+                "b.example.com": {"status": "404", "title": None, "tech": "nginx"},
+            })
+            self.assertEqual(out["vps"], "ok")
+            self.assertEqual(out["total"], 2)
+            self.assertEqual(out["enriched"], 1)
+            by = {h["host"]: h for h in out["hosts"]}
+            self.assertEqual(by["b.example.com"]["status"], "404")
+            self.assertEqual(by["a.example.com"]["status"], None)
+
+    def test_remote_extract_py_round_trips_through_the_local_parser(self):
+        """The base64 payload the server ships to the VPS must emit exactly the shape
+        parse_extract_lines consumes — run it locally against a fixture line."""
+        import base64
+        code = base64.b64decode(
+            base64.b64encode(self.dsrv._HTTPX_REMOTE_PY.encode())).decode()
+        fixture = json.dumps({"url": "https://x.example.com", "host": "x.example.com",
+                              "status_code": 200, "title": "X", "tech": ["nginx", "PHP"],
+                              "webserver": "nginx", "cdn_name": "cloudfront"})
+        import contextlib, io
+        ns = {"__name__": "__main__"}
+        old_argv = sys.argv
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+            fh.write(fixture + "\n")
+            path = fh.name
+        try:
+            sys.argv = [sys.argv[0], path]
+            with contextlib.redirect_stdout(io.StringIO()) as buf:
+                exec(compile(code, "remote", "exec"), ns)
+            out = self.dsrv.parse_extract_lines(buf.getvalue().splitlines())
+        finally:
+            sys.argv = old_argv
+            os.unlink(path)
+        self.assertEqual(out["x.example.com"]["status"], "200")
+        self.assertIn("nginx", out["x.example.com"]["tech"])
