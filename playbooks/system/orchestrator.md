@@ -51,7 +51,7 @@ resolve the target  →  load the named skill  →  verify its required inputs
    names, put incidental facts through `kb.py add` with evidence, run `kb.py reassess` and
    `kb.py patterns`, record what the run did **not** cover, pull VPS execution records when the
    skill used them, then regenerate `progress.md` with `tools/progress.py targets/<t>`.
-6. **STOP.** Report the decision-relevant delta, then 2–3 conditional next actions, and stop.
+6. **STOP.** Report the decision-relevant delta, then at most 3 next actions, and stop.
 
 ---
 
@@ -66,7 +66,8 @@ Everything the hunter already decided.
   them**, declared in those skills' own `## Inputs` — not global gates. A skill that compares two
   principals says so at the moment it needs them and stops there; that is the same single rule,
   not a second kind of veto.
-- **Which objective runs next.** You may name 2–3 with cost and expected gain. They choose.
+- **Which objective runs next.** You may name up to 3, each grounded in something this run
+  learned, with cost and expected gain. They choose.
 - **Whether a payload is worth sending.** Inside a skill they invoked, with its required inputs
   present, run it to completion — including the requests that actually test the hypothesis. The one
   thing this does **not** license: what goes *into* the payload. The requests are yours to send; the
@@ -115,8 +116,15 @@ Not gates on *what* you may work on — properties of doing it honestly.
 1. **What changed?** The compressed delta, not the whole inventory.
 2. **What proves it?** Exact artifact and source pointers.
 3. **What did this not cover?** Selector, limitations, stale inputs, blind dimensions.
-4. **What is awaiting the hunter?** Two or three conditional choices, each with cost, risk,
-   prerequisite and expected gain.
+4. **What is awaiting the hunter?** At most three choices, each with cost, risk, prerequisite
+   and expected gain — and **each citing the fact from this run that motivates it**. A
+   suggestion with nothing from this run behind it is boilerplate, and "no change to what's
+   worth doing next" is a valid close. Name a skill only when its inputs exist
+   (`tools/preflight.py <t> <skill>` is the cheap read-only check); when they don't, the honest
+   suggestion is the skill that produces the missing input — proposing `vuln-hunt` on an
+   entrypoint that has no properties yet is really a proposal to run `derive-properties`.
+   Inside an authorized flow or runbook the sequence is already decided — surface only
+   deviations.
 
 Then **STOP**. `STOP` is a required state transition, not a conversational flourish.
 

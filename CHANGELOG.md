@@ -3,6 +3,20 @@
 This file records user-visible HunterStick changes by the date they were added. Entries are newest
 first. Dates use `YYYY-MM-DD`; they describe repository changes, not target activity or releases.
 
+## 2026-09-03
+
+### Changed
+
+- **The closing contract: cite or say nothing.** "STOP with 2–3 conditional next actions" is now
+  "STOP with at most 3 next actions, each citing the fact from this run that motivates it" —
+  "no change to what's worth doing next" is a valid close, an option invented to fill a count is
+  not. Also added: a next action names a skill only when that skill's inputs exist (the cheap
+  check is `tools/preflight.py`), otherwise the honest suggestion is the producer skill —
+  proposing `vuln-hunt` on an entrypoint with no properties yet is really a proposal to run
+  `derive-properties`. Inside an authorized flow or runbook the sequence is already decided, so
+  closing actions surface deviations only. All 15 statements of the duty across 13 files were
+  aligned to the same wording.
+
 ## 2026-08-15
 
 ### Added

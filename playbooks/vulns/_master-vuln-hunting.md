@@ -78,7 +78,7 @@ one place the loop can quietly turn a one-class request into a twelve-class swee
   - **a named family** ("access control", "client-side injections") → work the classes in that
     family whose surface is actually present. The family *is* the selection.
   - **everything else you enumerated** → **record, never run.** Write it into `hypotheses.md`
-    with the property that implied it, and name the best two or three in your closing actions.
+    with the property that implied it, and name the best of them in your closing actions.
 - Is each class *plausible* here? If its surface is not present, say so — a negative is a real
   result **for that class**, and cheap to record.
 - **A negative on one class NEVER clears the endpoint.** Coverage is per (entrypoint × class) in

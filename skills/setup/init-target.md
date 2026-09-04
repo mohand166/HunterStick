@@ -170,8 +170,8 @@ it was, and the next skill runs against whichever target the human names.
 
 ## Exit criteria / handoff
 - Every schema path exists; no invented facts; every gap is a named blocker.
-- Return **2–3 conditional next actions** (cost · risk/ROE · prerequisite · expected gain) per
-  `phase-routing.md` §4 — normally:
+- Return **at most 3 next actions** (cost · risk/ROE · prerequisite · expected gain, each citing
+  what in the fresh brain motivates it) per `phase-routing.md` §4 — normally:
   - **The entry phase you derived from the scope shape** (`phase-routing.md` §1) — a company name
     starts at `organization-and-roots`; a wildcard apex at `subdomain-enumeration`; one host at
     `07` then `17`/`12`. Name it, with its cost and prerequisites.

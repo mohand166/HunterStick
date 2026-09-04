@@ -29,7 +29,8 @@ description: Analyze a bug-bounty application through its known or suspected web
    behavior override generic framework expectations.
 7. Record corrected facts, implicated entrypoints and bounded hypotheses in the target brain using
    the output contract in `_analysis.md`.
-8. Report the delta, uncertainties, lower-priority paths and 2–3 conditional next actions. Stop.
+8. Report the delta, uncertainties, lower-priority paths and at most 3 next actions, each citing
+   a fact from this analysis. Stop.
 
 Do not turn a framework fingerprint, public client identifier, CVE match or default endpoint into a
 finding. Do not run vulnerability probes unless the hunter explicitly invokes the normal

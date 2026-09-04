@@ -63,8 +63,11 @@ situation it wasn't written for.**
 
 ## After
 Write outputs into the brain as each step's own skill file specifies, update `index.md` (counts,
-VPS raw pointer, timestamp, one bounded run in `runs.tsv` per step), then **STOP** with 2–3 conditional next
-actions. `tools/dashboard.py targets/<t>` regenerates the one-screen view.
+VPS raw pointer, timestamp, one bounded run in `runs.tsv` per step), then **STOP** with at most 3
+next actions, each citing a fact from this run. The flow's own sequence is already authorized, so
+these are **deviations the hunter should hear** — a premise that aged, a step that no longer earns
+its place — not a restatement of the flow's next step. `tools/dashboard.py targets/<t>`
+regenerates the one-screen view.
 
 **Report the compression, not the volume.** "3,918 hosts → 6 clusters → these 3" is the useful
 sentence; a list of everything found is the thing the human already could not read.

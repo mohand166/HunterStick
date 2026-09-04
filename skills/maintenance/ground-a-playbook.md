@@ -114,5 +114,5 @@ Every new/changed readable source was evaluated · one destination was deliberat
 
 ## Next
 
-Offer at most 2–3 conditional next actions. Do not re-evaluate another skill unless the human names
+Offer at most 3 next actions, each citing a fact from this re-evaluation. Do not re-evaluate another skill unless the human names
 it.

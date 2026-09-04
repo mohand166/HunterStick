@@ -157,9 +157,10 @@ keeps pointers to the underlying evidence. Facts, hypotheses, and assumptions re
 
 ### 6. The model hands control back
 
-The model reports the delta, evidence, and limitations, offers two or three conditional next
-actions, and stops. The user chooses the next skill. That decision starts a new bounded unit of
-work against a richer target brain.
+The model reports the delta, evidence, and limitations, then offers up to three next actions —
+each tied to a fact from that run, or an honest "no change to what's worth doing next" — and
+stops. The user chooses the next skill. That decision starts a new bounded unit of work against
+a richer target brain.
 
 ## How the target brain works
 

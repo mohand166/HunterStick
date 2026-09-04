@@ -167,9 +167,11 @@ That is different from running the *next* objective. You never do that on your o
 
 ## Then stop
 
-Summarize what changed — not what exists. Close with **2–3 conditional next actions**, each with
-cost, risk, prerequisite and expected gain, and let the hunter choose. Never "next is the next
-objective in the list": the graph branches on what you just learned.
+Summarize what changed — not what exists. Close with **at most 3 next actions**, each with cost,
+risk, prerequisite and expected gain and **each citing the fact from this run that motivates it**
+— "no change to what's worth doing next" is a valid close; an option invented to fill a count is
+not. Let the hunter choose. Never "next is the next objective in the list": the graph branches on
+what you just learned.
 
 ---
 

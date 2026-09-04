@@ -137,7 +137,8 @@ Then report:
 2. newly implicated entrypoints and components;
 3. ranked hypotheses, including the mechanism and canonical class;
 4. what became lower priority and the evidence supporting that decision;
-5. two or three conditional next actions with cost, risk, prerequisites and expected gain.
+5. at most three next actions with cost, risk, prerequisites and expected gain, each citing a
+   fact from this analysis.
 
 Stop. Testing requires the normal vulnerability-hunt authorization and class playbook.
 

@@ -52,8 +52,9 @@ One consolidated report, written as the final step:
   restatements. Monitor deltas reconciled, advisories found, surfaces re-ranked.
 - **The re-ranked top entrypoints** with staleness — what is worth hunting, with the age of the
   recon behind each.
-- **Decisions worth the hunter's time** — 2–3 conditional next actions, each with cost, risk,
-  prerequisite and expected gain. This is where a hunt is *proposed*.
+- **Decisions worth the hunter's time** — at most 3 next actions, each with cost, risk,
+  prerequisite and expected gain and each citing a fact from this run's deltas ("no change" is a
+  valid close). This is where a hunt is *proposed* — on entrypoints the run just re-ranked.
 - **One digest notification** — `tools/notify.py send <t> --event runbook-digest --title ...`
   with the brief's first line. One ping, never one per step.
 
@@ -65,6 +66,6 @@ The digest was sent or its absence stated. Then **STOP**.
 
 ## Next
 
-Offer, do not choose: the brief's own 2–3 proposals · `vuln-hunt` on the top-ranked entrypoint if
+Offer, do not choose: the brief's own proposals · `vuln-hunt` on the top-ranked entrypoint if
 the hunter picks one · editing `runbook.md` if tonight's run showed a step that no longer earns
 its place — the runbook should be tuned, not endured.

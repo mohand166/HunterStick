@@ -88,8 +88,11 @@ manual dispatch. Nothing here depends on which company trained the model.
 Every unit of work runs the **one** lifecycle, and it lives in `orchestrator.md`, not here:
 *resolve → load → verify inputs → loop to the skill's exit → persist the delta → **STOP***. This
 file does not restate it — a second copy only drifts. What is non-negotiable at the end of every
-unit: **STOP** with 2–3 conditional next actions (cost · risk · prerequisite · expected gain).
-Never "next is phase N+1"; the graph branches on what you just learned.
+unit: **STOP** with at most 3 next actions, each citing the fact from this run that motivates it
+(cost · risk · prerequisite · expected gain). "No change to what's worth doing next" is a valid
+close; an option invented to fill a count is not. Never "next is phase N+1"; the graph branches
+on what you just learned. A next action names a skill only when that skill's inputs exist — when
+they don't, the honest suggestion is the skill that produces the missing input.
 
 **Flows are the one bundle, and only because the human authorized the bundle.** A flow
 (`playbooks/flows/`) is a named response to a *situation* — "this host 404s everything", "no signup

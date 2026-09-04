@@ -56,7 +56,7 @@ runs; a required input missing there stops that step the normal way (name it, na
 5. **Fold the result into the surface.** New entrypoints → `derive-properties`. New facts → `kb.py
    add` with evidence. A confirmed issue → `findings/`. The pipeline's product is brain state, not a
    chat answer.
-6. **STOP** with the delta and 2–3 conditional next actions.
+6. **STOP** with the delta and at most 3 next actions, each citing a fact from this run.
 
 ## Discipline — the whole reason this is a skill and not improvisation
 
