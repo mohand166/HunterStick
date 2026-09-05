@@ -47,7 +47,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import roles      # noqa: E402
 import skilllib   # noqa: E402
-from dashboard import state_of                                  # noqa: E402
+from brainlib import state_of                                   # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 # Kept as a public compatibility constant for callers that import it. Discovery itself is

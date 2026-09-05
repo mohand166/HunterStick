@@ -210,12 +210,7 @@ flowchart TD
   host/IP, including the skill, tool, exact redacted command and options, wordlist/input hashes,
   result, and evidence pointer. Set-based commands remain explicitly unresolved instead of being
   guessed onto every host.
-- **A browsable dashboard** — `tools/dashboard.py --all` renders a gitignored `dashboard.html`: a
-  sidebar lists every target with status chips (open runs, resume points, staleness, probes,
-  surface); clicking one loads open runs, the runs ledger, attack surface, testing state, the
-  rendered `progress.md`, roots/DNS, and a brain-files age tab, hash-routed so refresh and back
-  stay put. `accounts.md` is summarized to usable-principal counts, never rendered, so credentials
-  stay out of every generated page. For a live view instead of a snapshot, run the Python
+- **A browsable dashboard** — run the Python
   dashboard app — `python3 tools/dashboard-server.py` and open `http://127.0.0.1:8787`
   (`--port N` for another port). It is stdlib-only, read-only, and binds localhost; it serves an
   ASM-style SPA (`web/`) — fleet KPIs, activity charts, the recon funnel, per-target

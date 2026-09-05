@@ -23,7 +23,7 @@ An existing target brain. No traffic needed for steps 1–2.
    (**re-read: programs change scope**), `attack-surface.md` (the ranking), `tested.md` (what is
    already ruled out), `hypotheses.md` (open leads), and **every other `.md` at the target root** —
    ad-hoc analysis files are usually the densest thing there and nothing indexes them.
-   `tools/dashboard.py targets/<t>` renders this in one screen.
+   the live console (`tools/dashboard-server.py`) renders this in one screen.
 2. **Age each input.** Which numbers came from which date? Anything older than the scope statement
    itself is suspect. State the ages out loud — *"this ranking is 23 days old"* — rather than
    silently reusing them.

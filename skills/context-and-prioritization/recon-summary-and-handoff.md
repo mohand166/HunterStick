@@ -80,9 +80,9 @@ whatever exists and say what was thin.
   signal. If a cap ran, the number it produced is a sample and must be labelled one.
 - **This skill produces no new facts about vulnerabilities.** It organises existing ones. A
   well-argued hypothesis is still a hypothesis, and the evidence gate is unchanged.
-- **Do not summarise the dashboard.** Generate the review from the brain with `dashboard.py`, which
-  computes counts from the files and flags rows where the manifest disagrees, and stamp it with the
-  generation time. Hand-copying counts reintroduces exactly the drift the tool exists to catch.
+- **Do not hand-copy counts.** Derive every number from the files (as `tools/brainlib.py` and the
+  live console do) and stamp the summary with its generation time. Hand-copying counts
+  reintroduces exactly the drift the parsers exist to catch.
 - **A confident summary is not a source.** Where the underlying research is unsourced or two
   sources disagree, carry the disagreement forward. A handoff that reads as unanimous when its
   inputs were not is more dangerous than one that shows its seams.

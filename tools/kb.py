@@ -673,31 +673,6 @@ def _cell(s, limit=160):
     return s.replace("|", "\\|")
 
 
-def render_dashboard(tdir):
-    """Re-render `recon-review.html` when a run closes.
-
-    The recon skill has always said "re-render the view — every phase, no exceptions", and it was
-    still forgotten repeatedly: a rule a human or a model has to remember is a rule that decays.
-    Closing a run is the one action that reliably happens at the end of every phase, so the render
-    is attached to it instead. Runtime-agnostic on purpose — a Claude Code hook would not fire on
-    the other models this workspace supports.
-
-    A dashboard one phase behind is worse than none, because HTML looks authoritative.
-
-    Never raises: recording the run is the job that matters, and a rendering problem must not cost
-    the record. Returns a short status line.
-    """
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parent))
-        import importlib
-        dash = importlib.import_module("dashboard")
-        page = dash.render(tdir)
-        (tdir / "recon-review.html").write_text(page, encoding="utf-8")
-        return f"recon-review.html re-rendered ({len(page):,} bytes)"
-    except Exception as exc:                                   # noqa: BLE001 - never fatal
-        return (f"recon-review.html NOT re-rendered ({exc.__class__.__name__}: {exc}) — "
-                f"run tools/dashboard.py {tdir} by hand")
-
 
 def render_progress(tdir):
     """Refresh the generated hunter view when a run reaches a terminal state."""
@@ -788,9 +763,9 @@ def cmd_run(args):
     print(f"  {rid}  {row['phase']}  selector={row['selector']}  [{args.status}]"
           + (f"  model={row['model']}" if row.get("model") else ""))
     # A run that is still `running` has changed nothing worth re-rendering; every terminal status
-    # ends a phase and must leave the view current.
+    # ends a phase and must leave the derived view current. The live console needs no re-render —
+    # it recomputes on request — so only progress.md regenerates here.
     if args.status != "running":
-        print(f"  {render_dashboard(tdir)}")
         print(f"  {render_progress(tdir)}")
     if args.status == "running":
         print("  Logged BEFORE the work. If this session dies, the next one sees an interrupted run\n"

@@ -5,6 +5,17 @@ first. Dates use `YYYY-MM-DD`; they describe repository changes, not target acti
 
 ## 2026-09-04
 
+### Removed
+
+- **The static dashboard snapshot is gone.** The retired `dashboard.py` snapshot renderer (and
+  its generated
+  `dashboard.html` / per-target `recon-review.html`) is deleted — the live console recomputes
+  every view on request, so a snapshot that ages the moment it is written is worse than none.
+  Its parser half was extracted first into `tools/brainlib.py`, the shared brain-parsing
+  library now imported by `dashboard-server.py` and `suggest-flows.py`, so nothing lost the
+  one-reader-set guarantee. `kb.py` no longer re-renders a view when a run closes (it still
+  regenerates `progress.md`); the gitignore entries for the generated HTML went with it.
+
 ### Changed
 
 - **The closing contract: cite or say nothing.** "STOP with 2–3 conditional next actions" is now
@@ -124,7 +135,8 @@ first. Dates use `YYYY-MM-DD`; they describe repository changes, not target acti
   found what* from real data — the measurement under cheap-model-for-volume /
   strong-model-for-judgment routing. Older brains migrate in place (header-only rewrite); an
   unstamped run reads as `—`, never blocks, and closing a run preserves its stamp.
-- **Workspace dashboard SPA.** `tools/dashboard.py --all` now builds a root `dashboard.html`
+- **Workspace dashboard SPA.** `dashboard.py --all` (the since-retired snapshot renderer) built a
+  root `dashboard.html`
   (gitignored): a sidebar lists every target with status chips (open runs, resume points,
   staleness, probes, surface), clicking one loads its dashboard into the main area with no
   reload (hash-routed, so refresh and back stay put). Each target view is restructured around

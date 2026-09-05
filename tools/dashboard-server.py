@@ -50,7 +50,7 @@ from urllib.parse import unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dashboard as dash        # noqa: E402  one parser set, not two
+import brainlib as dash         # noqa: E402  one parser set, not two
 import runlog                   # noqa: E402
 
 STALE_DAYS = dash.STALE_DAYS
@@ -76,10 +76,7 @@ _CACHE_TTL = 5.0        # seconds; the browser polls slower than this
 
 def _runs(tdir):
     """Latest row per run_id — the open→close pattern writes the id twice."""
-    latest = {}
-    for r in dash._runs(tdir):
-        latest[r["run_id"]] = r
-    return list(latest.values())
+    return dash.runs_latest(tdir)
 
 
 def _host_key(u):

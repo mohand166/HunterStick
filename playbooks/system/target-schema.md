@@ -73,7 +73,6 @@ targets/<target>/
                           Facts a phase learns INCIDENTALLY go here, not into prose. Never
                           overwritten — a later observation supersedes an earlier one
                           visibly. `tools/kb.py reassess|chains` reads it.
-  recon-review.html     ← generated browser dashboard (recon-summary-and-handoff); MD/txt stay source of truth
 
   investigations/<lead>/ ← deep-dive working notes + artifacts for one lead
     chain.md              multi-entrypoint/class chain, approval gates, evidence links
@@ -116,7 +115,7 @@ loses the one thing that makes it useful later — which engagement it belongs t
 
 **The split rule: local holds what you need to decide *what to do next*; the VPS holds what you
 need to *re-derive* it.** Curated extracts (`recon/*.md`) are small and are read by attack-surface-prioritization,
-`coverage.py` and `tools/dashboard.py` — they must be local. Bulk output (hundreds of MB of JS,
+`coverage.py` and `tools/brainlib.py` — they must be local. Bulk output (hundreds of MB of JS,
 URLs, DNS) is re-derivable by re-running the phase — it stays on the VPS.
 
 `tools/vps-sync.py status <target-dir>` enforces this mechanically — it names every local file
@@ -451,7 +450,7 @@ still reading as current, so ask the files instead: `wc -l` for a list, `tools/c
 <target-dir>` for the surface, `tools/kb.py runs <target>` for what has actually been run.
 **`missing` and `0` are different states** and must stay distinguishable: a missing file is a
 preflight failure for the skill that needs it, an empty one is a real (if disappointing) result.
-`tools/dashboard.py` computes both from the files rather than repeating a claim.
+`tools/brainlib.py` computes both from the files rather than repeating a claim — the live console renders the distinction.
 
 `progress.md` is also derived, but it is deliberately checked in with each brain so the hunter can
 open one readable file. `tools/progress.py <target-dir>` regenerates it from the authoritative

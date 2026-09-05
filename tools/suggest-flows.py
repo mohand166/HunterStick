@@ -13,7 +13,7 @@ or it is **not claimed**. Four of the nine situations (dead-end-host, spa-fronte
 static-site) need someone to look at a response, and the brain stores prose there. Those are listed
 under "needs your eyes" with the evidence to check — never asserted.
 
-Reuses tools/dashboard.py for file-state and principal counting so the two can never disagree
+Reuses tools/brainlib.py for file-state and principal counting so the tools can never disagree
 about whether an account is real.
 
 Exit: 0 suggestions printed · 2 unusable target directory.
@@ -25,8 +25,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import runlog   # noqa: E402
-from dashboard import (DATA_FILES, age_days, field, read, state_of,   # noqa: E402
-                       table_rows, table_with, usable_principals)
+from brainlib import (DATA_FILES, age_days, field, read, state_of,   # noqa: E402
+                      table_rows, table_with, usable_principals)
 from kb import calibration_of, read_runs                              # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent

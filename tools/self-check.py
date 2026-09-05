@@ -52,10 +52,10 @@ FORBIDDEN_TEXT_EXEMPT = {
     "targets/_template/index.md",       # states "There is no 'current phase'" on purpose
     "playbooks/system/phase-routing.md",
     "README.md",
-    # these two READ the legacy field as a fallback so an older brain still renders; they never
+    # these READ the legacy field as a fallback so an older brain still renders; they never
     # instruct anyone to write it
     "tools/brief.py",
-    "tools/dashboard.py",
+    "tools/brainlib.py",
 }
 
 
@@ -468,7 +468,7 @@ def check_template_is_virgin():
     Running any tool against `targets/_template` appends to its ledgers, and the template is the
     one target directory that IS committed. A single line of someone else's testing shipped in the
     initial commit this way: `suggest-flows.py 0 targets/_template --why`. It is harmless in
-    content and wrong in principle — a fresh clone must start empty, and `dashboard.py` counts
+    content and wrong in principle — a fresh clone must start empty, and `brainlib.py` counts
     those rows.
     """
     failures = []

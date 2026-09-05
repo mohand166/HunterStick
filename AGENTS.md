@@ -312,7 +312,7 @@ are the system files it does not cover:
 **Tools** — you run these; the human does not. All exit `2` on failure.
 
 `brief.py [t] [--resume]` · `config.py check|ssh` · `suggest-flows.py <t>` · `coverage.py <t>` ·
-`kb.py add|run|runs|reassess|patterns|chains|cohort|vocab` · `dashboard.py <t>|--all` ·
+`kb.py add|run|runs|reassess|patterns|chains|cohort|vocab` ·
 `dashboard-server.py [--port N]` (live console; hunter-facing, long-running) ·
 `progress.py <t>` ·
 `app-context.py resolve|ensure <t> <host>` ·
