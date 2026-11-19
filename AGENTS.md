@@ -53,6 +53,23 @@ reference it names, when they invoke it. `class-signals.md` loads only when you 
 recommending (above) — for an exactly named skill it is not needed, which keeps the resident tier
 to `AGENTS.md` + `orchestrator.md` + the named target's small files.
 
+## Idea-block recall — read-only, before you hypothesize
+
+Once per target, from the **parent repo root** (`..` from this directory), run
+`python3 tools/recall.py --list`. It prints the catalog of the repo's *idea bank* —
+4,588 report-derived blocks in the parent `skills/`, a different library from this
+framework's `skills/`. Then, **before forming any hypothesis, suggesting a test,
+or writing a payload**, run
+`python3 tools/recall.py "<concrete observation>" --headings -n 20`.
+
+This is a **read-only knowledge lookup**. It does not route a HunterStick skill,
+authorize a test, add target state, or change the one-skill / STOP lifecycle and
+the non-negotiable rules below — those still govern everything. A recalled block
+is a candidate exploit *shape*, not a finding: match its `[UNAUTH]`/`[AUTH]` tag
+to the access you actually have, verify its root cause on this target, and never
+paste its payload blindly. If recall has no close match, say so and reason from
+first principles. Full protocol: `../../HUNT-WORKFLOW.md`.
+
 ---
 
 ## The router — say the thing, don't cite the path
